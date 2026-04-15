@@ -1,0 +1,15 @@
+{
+  "items": [
+    { "id": "sports_drink",  "name": "スポーツドリンク",      "cost": 50,   "type": "item", "minRep": 0, "effect": "stamina_small",    "desc": "スタミナが少し回復する" },
+    { "id": "meal_ticket",   "name": "学食のサービス券",       "cost": 80,   "type": "item", "minRep": 0, "effect": "efficiency_small",  "duration": 5,  "desc": "5週の間、練習効率が少し上がる" },
+    { "id": "energy_drink",  "name": "エナジードリンク",       "cost": 150,  "type": "item", "minRep": 1, "effect": "stamina_medium",   "desc": "スタミナが回復する" },
+    { "id": "bbq_ticket",    "name": "バーベキューチケット",   "cost": 200,  "type": "item", "minRep": 1, "effect": "efficiency_medium", "duration": 10, "desc": "10週の間、練習効率が上がる" },
+    { "id": "massage",       "name": "マッサージ券",           "cost": 300,  "type": "item", "minRep": 3, "effect": "stamina_all",      "desc": "全員のスタミナが回復する" },
+    { "id": "scout_ticket",  "name": "スカウトチケット",       "cost": 200,  "type": "item", "minRep": 3, "effect": "scout",            "desc": "スカウトに使用する" },
+    { "id": "gold_scout",    "name": "金のスカウトチケット",   "cost": 800,  "type": "item", "minRep": 3, "effect": "scout_gold",       "desc": "必ずオールラウンダーをスカウトできる（高額）" }
+  ],
+  "facilities": [
+    { "id": "fan",    "name": "扇風機",   "cost": 300,  "type": "facility", "minRep": 0, "effect": "efficiency_small",  "desc": "練習効率が少し上がる（恒久）" },
+    { "id": "aircon", "name": "空調設備", "cost": 1000, "type": "facility", "minRep": 2, "effect": "efficiency_medium", "desc": "練習効率が上がる（恒久）" }
+  ]
+}

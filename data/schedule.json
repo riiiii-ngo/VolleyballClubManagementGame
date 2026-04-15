@@ -1,0 +1,39 @@
+{
+  "months": [4,5,6,7,8,9,10,11,12,1,2,3],
+  "monthNames": {
+    "4":"4月","5":"5月","6":"6月","7":"7月","8":"8月","9":"9月",
+    "10":"10月","11":"11月","12":"12月","1":"1月","2":"2月","3":"3月"
+  },
+  "matchSchedule": {
+    "8":  { "tournament": "prefectural",   "round": 0, "name": "県大会1回戦",       "maxSets": 3 },
+    "9":  { "tournament": "prefectural",   "round": 1, "name": "県大会準決勝",      "maxSets": 3 },
+    "10": { "tournament": "prefectural",   "round": 2, "name": "県大会決勝",        "maxSets": 3 },
+    "16": { "tournament": "interhigh",     "round": 0, "name": "インターハイ1回戦", "maxSets": 3 },
+    "17": { "tournament": "interhigh",     "round": 1, "name": "インターハイ準決勝","maxSets": 3 },
+    "18": { "tournament": "interhigh",     "round": 2, "name": "インターハイ決勝",  "maxSets": 5 },
+    "24": { "tournament": "spring_prelim", "round": 0, "name": "春高予選1回戦",     "maxSets": 3 },
+    "25": { "tournament": "spring_prelim", "round": 1, "name": "春高予選準決勝",    "maxSets": 3 },
+    "26": { "tournament": "spring_prelim", "round": 2, "name": "春高予選決勝",      "maxSets": 5 },
+    "36": { "tournament": "spring",        "round": 0, "name": "春高1回戦",         "maxSets": 3 },
+    "37": { "tournament": "spring",        "round": 1, "name": "春高準決勝",        "maxSets": 5 },
+    "38": { "tournament": "spring",        "round": 2, "name": "春高決勝",          "maxSets": 5 }
+  },
+  "tournamentNames": {
+    "prefectural":   "県大会",
+    "interhigh":     "インターハイ",
+    "spring_prelim": "春高予選",
+    "spring":        "春高"
+  },
+  "repPointsWin": {
+    "prefectural":   [5,  10,  20],
+    "interhigh":     [10, 20,  40],
+    "spring_prelim": [10, 20,  30],
+    "spring":        [20, 40, 100]
+  },
+  "matchPointsWin": {
+    "prefectural":   [30,  60, 100],
+    "interhigh":     [60, 120, 200],
+    "spring_prelim": [60, 120, 150],
+    "spring":        [100,200, 500]
+  }
+}
