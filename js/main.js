@@ -48,6 +48,7 @@ window.onLoginSuccess = async function() {
 };
 
 async function afterLogin() {
+  await new Promise(r => setTimeout(r, 300)
   const savedState = await loadGame();
   hideLoading();
   if (savedState) {
