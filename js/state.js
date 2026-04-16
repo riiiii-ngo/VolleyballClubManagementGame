@@ -67,10 +67,10 @@ function saveGame(state) {
  * Supabase優先、失敗時はlocalStorageフォールバック
  * @returns {Promise<Object|null>}
  */
-async function loadGame() {
+async function loadGame(userId = null) {
   // Supabaseから読み込み試行
   try {
-    const dbState = await loadFromDB();
+    const dbState = await loadFromDB(userId);
     if (dbState) {
       // ローカルキャッシュも更新
       localStorage.setItem(SAVE_KEY, JSON.stringify(dbState));
@@ -93,9 +93,9 @@ async function loadGame() {
  * セーブデータが存在するか確認する
  * @returns {Promise<boolean>}
  */
-async function hasSave() {
+async function hasSave(userId = null) {
   try {
-    const dbState = await loadFromDB();
+    const dbState = await loadFromDB(userId);
     if (dbState) return true;
   } catch(e) {}
   return !!localStorage.getItem(SAVE_KEY);

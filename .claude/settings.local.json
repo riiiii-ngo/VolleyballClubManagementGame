@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -n \"hasSave\" \"f:/game/バレー部育成ゲーム/js/\"*.js)"
+    ]
+  }
+}

@@ -72,8 +72,8 @@ function renderLoginScreen() {
     if (!email || !password) { showError('メールアドレスとパスワードを入力してください。'); return; }
     showLoading('ログイン中...');
     try {
-      await signIn(email, password);
-      await window.onLoginSuccess();
+      const loginData = await signIn(email, password);
+      await window.onLoginSuccess(loginData?.session);
     } catch(e) {
       hideLoading();
       showError(getAuthErrorMessage(e));
@@ -639,8 +639,18 @@ function showMatchResult(result) {
 // ==============================
 // タイトル画面
 // ==============================
-function renderTitleScreen() {
+async function renderTitleScreen(userId = null) {
   const app = document.getElementById('app');
+  // セーブデータ確認中はスピナー表示
+  app.innerHTML = `<div style="display:flex;justify-content:center;align-items:center;height:100vh"><div class="loading-spinner"></div></div>`;
+
+  let hasSaveData = false;
+  try {
+    hasSaveData = await hasSave(userId);
+  } catch(e) {
+    console.error('hasSave failed:', e);
+  }
+
   app.innerHTML = `
     <div class="title-screen">
       <div class="title-main">
@@ -648,7 +658,7 @@ function renderTitleScreen() {
         <p class="title-sub">高校バレー部の監督となって日本一を目指せ！</p>
         <div class="title-btns">
           <button id="btn-new-game" class="btn-primary btn-large">ニューゲーム</button>
-          ${hasSave() ? '<button id="btn-continue" class="btn-secondary btn-large">コンティニュー</button>' : ''}
+          ${hasSaveData ? '<button id="btn-continue" class="btn-secondary btn-large">コンティニュー</button>' : ''}
         </div>
       </div>
     </div>`;

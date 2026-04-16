@@ -35,27 +35,27 @@ async function initGame() {
     renderLoginScreen();
   } else {
     // ログイン済み → セーブデータ読み込みへ
-    await afterLogin();
+    await afterLogin(session.user?.id ?? null);
   }
 }
 
 // ==============================
 // ログイン成功後の処理
 // ==============================
-window.onLoginSuccess = async function() {
+window.onLoginSuccess = async function(session) {
   showLoading('セーブデータ読み込み中...');
-  await afterLogin();
+  await afterLogin(session?.user?.id ?? null);
 };
 
-async function afterLogin() {
-  const savedState = await loadGame();
+async function afterLogin(userId = null) {
+  const savedState = await loadGame(userId);
   hideLoading();
   if (savedState) {
     G = savedState;
     startMainGame();
   } else {
     G = null;
-    renderTitleScreen();
+    await renderTitleScreen(userId);
   }
 }
 

@@ -55,14 +55,14 @@ async function getCurrentUserId() {
  * Supabaseからセーブデータを読み込む
  * @returns {Object|null} game_state オブジェクト、なければnull
  */
-async function loadFromDB() {
-  const userId = await getCurrentUserId();
-  if (!userId) return null;
+async function loadFromDB(userId = null) {
+  const uid = userId || await getCurrentUserId();
+  if (!uid) return null;
 
   const { data, error } = await _supabase
     .from('game_saves')
     .select('game_state')
-    .eq('user_id', userId)
+    .eq('user_id', uid)
     .maybeSingle();
 
   if (error) {
