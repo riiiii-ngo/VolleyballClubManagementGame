@@ -47,8 +47,14 @@ window.onLoginSuccess = async function(session) {
   await afterLogin(session?.user?.id ?? null);
 };
 
+<<<<<<< HEAD
 async function afterLogin(userId = null) {
   const savedState = await loadGame(userId);
+=======
+async function afterLogin() {
+  await new Promise(r => setTimeout(r, 300)
+  const savedState = await loadGame();
+>>>>>>> 6841ad0f70816ce2e482bb8efd9d2293c15f2d93
   hideLoading();
   if (savedState) {
     G = savedState;

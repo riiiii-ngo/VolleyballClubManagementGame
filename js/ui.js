@@ -48,9 +48,6 @@ function renderLoginScreen() {
           <button id="btn-signup" class="btn-secondary btn-large btn-full">新規登録</button>
         </div>
 
-        <div id="signup-note" class="login-note" style="display:none">
-          ※ 登録後、確認メールが届く場合があります。メールを確認してからログインしてください。
-        </div>
       </div>
     </div>
   `;
@@ -89,10 +86,7 @@ function renderLoginScreen() {
     showLoading('アカウント作成中...');
     try {
       await signUp(email, password);
-      hideLoading();
-      document.getElementById('signup-note').style.display = 'block';
-      showError('アカウントを作成しました。メールを確認後、ログインしてください。');
-      errorEl.style.color = '#81c784';
+      await window.onLoginSuccess();
     } catch(e) {
       hideLoading();
       showError(getAuthErrorMessage(e));
@@ -111,10 +105,8 @@ function renderLoginScreen() {
 function getAuthErrorMessage(error) {
   const msg = error.message || '';
   if (msg.includes('Invalid login credentials'))  return 'メールアドレスまたはパスワードが正しくありません。';
-  if (msg.includes('Email not confirmed'))         return 'メールアドレスが確認されていません。届いたメールのリンクをクリックしてください。';
   if (msg.includes('User already registered'))     return 'このメールアドレスはすでに登録されています。';
   if (msg.includes('Password should be'))          return 'パスワードは6文字以上にしてください。';
-  if (msg.includes('rate limit'))                  return 'しばらく時間をおいてから再試行してください。';
   return `エラー: ${msg}`;
 }
 
