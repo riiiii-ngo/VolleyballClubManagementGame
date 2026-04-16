@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "Bash(grep -n \"hasSave\" \"f:/game/バレー部育成ゲーム/js/\"*.js)"
+      "Bash(grep -n \"hasSave\" \"f:/game/バレー部育成ゲーム/js/\"*.js)",
+      "Bash(grep -n \"syntax\\\\|<\\\\\\\\\\\\\\\\/\" \"f:/game/バレー部育成ゲーム/js/ui.js\")",
+      "Bash(grep -Pn \"<\\\\\\\\\\\\\\\\[a-z]\" \"f:/game/バレー部育成ゲーム/js/ui.js\")",
+      "Bash(node --check js/supabase.js)",
+      "Bash(node --check js/config.js)",
+      "Bash(node --check js/state.js)",
+      "Bash(node --check js/player.js)",
+      "Bash(node --check js/practice.js)"
     ]
   }
 }
