@@ -114,20 +114,56 @@ function getAuthErrorMessage(error) {
 // ステータスバー
 // ==============================
 function updateStatusBar(state) {
-  document.getElementById('ui-date').textContent = `${state.year}年目 ${getDateString(state.week)}`;
-  const repName = REPUTATIONS[state.reputation];
-  const repColor = REPUTATION_COLORS[state.reputation];
-  document.getElementById('ui-rep').innerHTML = `評判: <span style="color:${repColor};font-weight:bold">${repName}</span>`;
-  document.getElementById('ui-points').textContent = `P: ${state.points}`;
+  const dateEl = document.getElementById('ui-date');
+  if (dateEl) dateEl.textContent = `${state.year}年目 ${getDateString(state.week)}`;
 
-  // 次の試合情報
+  const repName  = REPUTATIONS[state.reputation];
+  const repColor = REPUTATION_COLORS[state.reputation];
+  const repEl = document.getElementById('ui-rep');
+  if (repEl) repEl.innerHTML = `<span style="color:${repColor}">${repName}</span>`;
+
+  const pointsEl = document.getElementById('ui-points');
+  if (pointsEl) pointsEl.textContent = `${state.points}P`;
+
   const next = getNextMatchInfo(state);
-  const nextEl = document.getElementById('ui-next');
-  if (next) {
-    const weeksLeft = next.week - state.week;
-    nextEl.textContent = weeksLeft === 0 ? `今週: ${next.name}` : `次の試合: ${next.name} (${weeksLeft}週後)`;
+  const nextEl   = document.getElementById('ui-next');
+  const nextChip = document.getElementById('kpi-next-chip');
+  if (nextEl) {
+    if (next) {
+      const weeksLeft = next.week - state.week;
+      nextEl.textContent = weeksLeft === 0
+        ? `今週！ ${next.name}`
+        : `${next.name} ${weeksLeft}W`;
+      if (nextChip) nextChip.classList.toggle('kpi-match', weeksLeft === 0);
+    } else {
+      nextEl.textContent = '試合なし';
+      if (nextChip) nextChip.classList.remove('kpi-match');
+    }
+  }
+
+  const avgEl = document.getElementById('ui-team-stamina');
+  if (avgEl && state.players.length > 0) {
+    const avg = Math.round(state.players.reduce((s, p) => s + p.currentStamina, 0) / state.players.length);
+    const sts = staminaStatus(avg);
+    avgEl.innerHTML = `<span style="color:${sts.color}">${avg}</span>`;
+  }
+}
+
+// action-footer の内容をセット/クリアするヘルパー
+function setActionFooter(html) {
+  let footer = document.getElementById('action-footer');
+  if (!footer) {
+    footer = document.createElement('div');
+    footer.id = 'action-footer';
+    footer.className = 'action-footer';
+    const app = document.getElementById('app');
+    if (app) app.appendChild(footer);
+  }
+  if (html) {
+    footer.innerHTML = html;
+    footer.style.display = 'block';
   } else {
-    nextEl.textContent = '今年の試合は終了';
+    footer.style.display = 'none';
   }
 }
 
@@ -137,53 +173,106 @@ function updateStatusBar(state) {
 function renderHome(state) {
   const el = document.getElementById('tab-home');
 
-  // 試合週か練習週か
   const matchInfo = MATCH_SCHEDULE[state.week];
   const tState = matchInfo ? state.tournaments[matchInfo.tournament] : null;
   const isMatchWeek = matchInfo && tState && !tState.eliminated && !tState.champion;
   const isEliminatedMatchWeek = matchInfo && tState && tState.eliminated;
 
-  // 出場条件チェック
   let qualified = true;
   let qualCondition = '';
   if (isMatchWeek) {
     if (matchInfo.tournament === 'interhigh' && !state.tournaments.prefectural.champion) {
-      qualified = false;
-      qualCondition = '出場条件：県大会優勝';
+      qualified = false; qualCondition = '出場条件：県大会優勝';
     }
     if (matchInfo.tournament === 'spring' && !state.tournaments.spring_prelim.champion) {
-      qualified = false;
-      qualCondition = '出場条件：春高予選優勝';
+      qualified = false; qualCondition = '出場条件：春高予選優勝';
     }
   }
 
-  let weeklyInfo = '';
+  // 状況カード
+  let situationHtml = '';
   if (isMatchWeek && qualified) {
-    weeklyInfo = `<div class="match-week-banner">
-      <span class="banner-icon">🏐</span> 今週は <strong>${matchInfo.name}</strong>！
-    </div>`;
+    situationHtml = `
+      <div class="situation-card situation-match">
+        <div class="situation-title">今週の試合</div>
+        <div class="situation-main">🏐 ${matchInfo.name}</div>
+        <div class="situation-sub">スタメン: ${isStarterComplete(state) ? '✓ 準備完了' : '⚠ 未設定あり'}</div>
+      </div>`;
   } else if (isMatchWeek && !qualified) {
-    weeklyInfo = `<div class="info-box condition-unmet">
-      <div style="font-weight:700;margin-bottom:4px">⚠ ${matchInfo.name}</div>
-      <div>${qualCondition}（未達成のため練習になります）</div>
-    </div>`;
+    situationHtml = `
+      <div class="situation-card situation-warn">
+        <div class="situation-title">試合週 (出場不可)</div>
+        <div class="situation-main">${matchInfo.name}</div>
+        <div class="situation-sub">${qualCondition} — 練習に切り替え</div>
+      </div>`;
   } else if (isEliminatedMatchWeek) {
-    weeklyInfo = `<div class="info-box muted">試合週ですが、${TOURNAMENT_NAMES[matchInfo.tournament]}は敗退済みです。練習に集中しましょう。</div>`;
+    situationHtml = `
+      <div class="situation-card">
+        <div class="situation-title">試合週 (敗退済み)</div>
+        <div class="situation-main">今週は練習</div>
+        <div class="situation-sub">${TOURNAMENT_NAMES[matchInfo.tournament]} は敗退済み</div>
+      </div>`;
+  } else {
+    const next = getNextMatchInfo(state);
+    const nextText = next
+      ? `次の試合: ${next.name}（${next.week - state.week}週後）`
+      : '今年の試合は全て終了';
+    situationHtml = `
+      <div class="situation-card situation-practice">
+        <div class="situation-title">練習週</div>
+        <div class="situation-main">${getDateString(state.week)}</div>
+        <div class="situation-sub">${nextText}</div>
+      </div>`;
   }
 
   // スタミナ警告
   const lowStamina = state.players.filter(p => p.currentStamina < 20);
-  let staminaWarning = '';
+  let staminaWarnHtml = '';
   if (lowStamina.length > 0) {
-    staminaWarning = `<div class="warning-box">⚠ スタミナ低下: ${lowStamina.map(p => p.name).join('、')}</div>`;
+    staminaWarnHtml = `
+      <div class="situation-card situation-warn">
+        <div class="situation-title">⚠ スタミナ低下</div>
+        <div class="situation-sub">${lowStamina.map(p => p.name).join('、')}</div>
+      </div>`;
   }
 
+  // チーム平均スタミナバー
+  const teamAvgStamina = state.players.length > 0
+    ? Math.round(state.players.reduce((s, p) => s + p.currentStamina, 0) / state.players.length)
+    : 0;
+  const sts0 = staminaStatus(teamAvgStamina);
+  const teamStaminaHtml = `
+    <div class="situation-card" style="padding:12px 16px">
+      <div class="situation-title">チーム体力</div>
+      <div class="team-stamina-overview">
+        <div class="tso-label">平均</div>
+        <div class="tso-bar-track">
+          <div class="tso-bar-fill" style="width:${teamAvgStamina}%;background:${sts0.color}"></div>
+        </div>
+        <div class="tso-value" style="color:${sts0.color}">${teamAvgStamina}</div>
+      </div>
+    </div>`;
+
+  // グループ簡易チップ
+  const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
+  let groupQuickHtml = '<div class="group-quick-row">';
+  for (let gi = 0; gi < groupCount; gi++) {
+    const menuId  = state.practiceSelections[gi];
+    const menu    = menuId ? PRACTICE_MENUS.find(m => m.id === menuId) : null;
+    const members = state.practiceGroups[gi].map(id => getPlayer(state, id)).filter(Boolean);
+    groupQuickHtml += `
+      <div class="group-quick-chip">
+        <div class="gqc-name">Gr.${gi + 1}</div>
+        <div class="gqc-menu ${menu ? '' : 'unset'}">${menu ? menu.name : '未設定'}</div>
+        <div class="gqc-members">${members.map(p => p.name.split(' ')[0]).join(' · ') || '未割当'}</div>
+      </div>`;
+  }
+  groupQuickHtml += '</div>';
+
   // トーナメント状況
-  let tournamentHtml = '<div class="section-title">今年のトーナメント</div><div class="tournament-status">';
+  let tournamentHtml = '<div class="section-title">トーナメント状況</div><div class="tournament-status">';
   for (const [key, name] of Object.entries(TOURNAMENT_NAMES)) {
     const ts = state.tournaments[key];
-    let status, cls;
-    // 出場条件表示
     let condText = '';
     if (key === 'interhigh' && !state.tournaments.prefectural.champion && !ts.eliminated && !ts.champion && ts.currentRound === 0) {
       condText = '<span class="t-condition">条件: 県大会優勝</span>';
@@ -191,9 +280,10 @@ function renderHome(state) {
     if (key === 'spring' && !state.tournaments.spring_prelim.champion && !ts.eliminated && !ts.champion && ts.currentRound === 0) {
       condText = '<span class="t-condition">条件: 春高予選優勝</span>';
     }
-    if (ts.champion) { status = '🏆 優勝！'; cls = 'champion'; }
-    else if (ts.eliminated) { status = '敗退'; cls = 'eliminated'; }
-    else { status = `${ts.currentRound}回戦突破`; cls = 'active'; }
+    let status, cls;
+    if (ts.champion)        { status = '🏆 優勝！'; cls = 'champion'; }
+    else if (ts.eliminated) { status = '敗退';      cls = 'eliminated'; }
+    else                    { status = `${ts.currentRound}回戦突破`; cls = 'active'; }
     tournamentHtml += `<div class="tournament-item ${cls}">
       <span class="t-name">${name}${condText}</span>
       <span class="t-status">${status}</span>
@@ -201,7 +291,7 @@ function renderHome(state) {
   }
   tournamentHtml += '</div>';
 
-  // 試合履歴（直近3件）
+  // 試合履歴
   let historyHtml = '';
   if (state.matchLog.length > 0) {
     historyHtml = '<div class="section-title">直近の試合</div><div class="match-history">';
@@ -209,7 +299,7 @@ function renderHome(state) {
       historyHtml += `<div class="history-item ${m.won ? 'win' : 'lose'}">
         <span class="h-year">${m.year}年目</span>
         <span class="h-name">${m.name}</span>
-        <span class="h-result">${m.won ? '勝利' : '敗戦'} ${m.score}</span>
+        <span class="h-result">${m.won ? '勝' : '負'} ${m.score}</span>
         <span class="h-detail">${m.setDetail}</span>
       </div>`;
     });
@@ -224,23 +314,27 @@ function renderHome(state) {
     weekLogHtml += '</div>';
   }
 
-  const advanceBtnLabel = (isMatchWeek && qualified) ? `試合へ: ${matchInfo.name}` : '次の週へ進む';
-  const advanceBtnClass = (isMatchWeek && qualified) ? 'btn-match' : '';
-
   el.innerHTML = `
-    ${weeklyInfo}
-    ${staminaWarning}
+    ${situationHtml}
+    ${staminaWarnHtml}
+    ${teamStaminaHtml}
+    ${groupQuickHtml}
+    <div class="btn-action-secondary-row">
+      <button class="btn-action-secondary" onclick="switchTabPublic('team')">👥 チーム設定</button>
+      <button class="btn-action-secondary" onclick="switchTabPublic('scout')">🔍 スカウト</button>
+    </div>
     ${tournamentHtml}
     ${weekLogHtml}
     ${historyHtml}
-    <div class="advance-area">
-      <button id="btn-advance" class="btn-primary btn-large ${advanceBtnClass}">
-        ${advanceBtnLabel}
-      </button>
-      ${(isMatchWeek && qualified) ? `<div class="match-note">スタメン設定: ${isStarterComplete(state) ? '完了' : '<span class="warn">未完了</span>'}</div>` : ''}
-    </div>
   `;
 
+  // action-footer に進むボタン
+  const isMatch = isMatchWeek && qualified;
+  setActionFooter(`
+    <button id="btn-advance" class="btn-action-primary ${isMatch ? 'btn-match-action' : ''}">
+      ${isMatch ? `🏐 試合へ: ${matchInfo.name}` : '次の週へ進む →'}
+    </button>
+  `);
   document.getElementById('btn-advance').addEventListener('click', () => window.onAdvanceWeek());
 }
 
@@ -249,30 +343,38 @@ function renderHome(state) {
 // ==============================
 function renderTeam(state) {
   const el = document.getElementById('tab-team');
+  setActionFooter('');
 
-  // スタメン設定
   const slotDefs = [
     { slot: 'OH1', label: 'OH①' }, { slot: 'OH2', label: 'OH②' },
     { slot: 'MB1', label: 'MB①' }, { slot: 'MB2', label: 'MB②' },
-    { slot: 'OP',  label: 'OP'   }, { slot: 'Se',  label: 'Se'   },
-    { slot: 'Li',  label: 'Li'   },
+    { slot: 'OP',  label: 'OP'   }, { slot: 'Se',  label: 'セッター' },
+    { slot: 'Li',  label: 'リベロ' },
   ];
 
-  let starterHtml = '<div class="section-title">スタメン設定</div><div class="starters-grid">';
+  const starterComplete = isStarterComplete(state);
+  let starterHtml = `
+    <div class="team-section-header">
+      <span class="team-section-label">スタメン設定</span>
+      <span style="font-size:0.75rem;color:${starterComplete ? 'var(--green)' : 'var(--red)'}">
+        ${starterComplete ? '✓ 完了' : '⚠ 未完了'}
+      </span>
+    </div>
+    <div class="starter-grid-v2">`;
+
   slotDefs.forEach(def => {
-    const pid = state.starters[def.slot];
-    const player = pid ? getPlayer(state, pid) : null;
-    const posName = def.slot.replace(/[0-9]/g,'');
+    const pid     = state.starters[def.slot];
+    const posName = def.slot.replace(/[0-9]/g, '');
     starterHtml += `
-      <div class="starter-slot">
-        <div class="slot-label">${def.label}</div>
-        <select class="starter-select" data-slot="${def.slot}">
+      <div class="starter-slot-v2">
+        <div class="ssv2-label">${def.label}</div>
+        <select class="ssv2-select" data-slot="${def.slot}">
           <option value="">-- 未設定 --</option>
           ${state.players
             .filter(p => p.position === posName || p.isAllRounder)
             .sort((a, b) => b.grade - a.grade || playerOverall(b) - playerOverall(a))
             .map(p => `<option value="${p.id}" ${pid === p.id ? 'selected' : ''}>
-              ${p.name} (${p.grade}年 OVR:${playerOverall(p)})
+              ${p.name} (${p.grade}年)
             </option>`).join('')}
         </select>
       </div>`;
@@ -281,61 +383,69 @@ function renderTeam(state) {
 
   // 練習グループ設定
   const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
-  let groupHtml = '<div class="section-title">練習グループ設定</div>';
-  groupHtml += '<div class="group-grid">';
+  let groupHtml = `
+    <div class="team-section-header">
+      <span class="team-section-label">練習グループ</span>
+      <button class="team-section-action" id="btn-auto-group">自動振り分け</button>
+    </div>
+    <div class="group-grid">`;
+
   for (let gi = 0; gi < groupCount; gi++) {
-    groupHtml += `<div class="group-col">
-      <div class="group-header">グループ${gi + 1}</div>
-      <div class="group-players" id="group-${gi}">`;
+    groupHtml += `
+      <div class="group-col">
+        <div class="group-header">グループ${gi + 1}</div>
+        <div class="group-players" id="group-${gi}">`;
     state.players.forEach(p => {
       const inGroup = state.practiceGroups[gi].includes(p.id);
-      groupHtml += `<label class="player-check">
-        <input type="checkbox" class="group-check" data-group="${gi}" data-pid="${p.id}" ${inGroup ? 'checked' : ''}>
-        ${p.name} (${p.grade}年 ${p.position})
-      </label>`;
+      groupHtml += `
+        <label class="player-check">
+          <input type="checkbox" class="group-check" data-group="${gi}" data-pid="${p.id}" ${inGroup ? 'checked' : ''}>
+          ${p.name} (${p.grade}年 ${p.position})
+        </label>`;
     });
     groupHtml += '</div></div>';
   }
   groupHtml += '</div>';
-  groupHtml += '<button id="btn-auto-group" class="btn-secondary">自動振り分け</button>';
 
-  // 選手一覧
-  let rosterHtml = '<div class="section-title">選手一覧</div><div class="roster-table-wrap">';
-  rosterHtml += `<table class="roster-table">
-    <thead><tr>
-      <th>名前</th><th>学年</th><th>Pos</th><th>OVR</th>
-      <th>SP</th><th>RV</th><th>BL</th><th>SV</th><th>TS</th>
-      <th>PW</th><th>SP2</th><th>TC</th><th>ST</th>
-    </tr></thead><tbody>`;
+  // 選手カードリスト
+  let rosterHtml = `
+    <div class="team-section-header">
+      <span class="team-section-label">選手一覧 <small style="font-weight:400;text-transform:none">(タップで詳細)</small></span>
+    </div>
+    <div class="player-card-list">`;
 
   state.players
     .sort((a, b) => b.grade - a.grade || playerOverall(b) - playerOverall(a))
     .forEach(p => {
-      const sts = staminaStatus(p.currentStamina);
+      const sts       = staminaStatus(p.currentStamina);
       const isStarter = Object.values(state.starters).includes(p.id);
-      rosterHtml += `<tr class="${isStarter ? 'starter-row' : ''}">
-        <td>${p.name}${p.isAllRounder ? ' <span class="badge-ar">全</span>' : ''}${isStarter ? ' <span class="badge-st">先</span>' : ''}</td>
-        <td>${p.grade}年</td>
-        <td>${p.position}</td>
-        <td><strong>${playerOverall(p)}</strong></td>
-        <td>${p.params.spike}</td>
-        <td>${p.params.receive}</td>
-        <td>${p.params.block}</td>
-        <td>${p.params.serve}</td>
-        <td>${p.params.toss}</td>
-        <td>${p.params.power}</td>
-        <td>${p.params.speed}</td>
-        <td>${p.params.technique}</td>
-        <td><span style="color:${sts.color}">${p.currentStamina}</span></td>
-      </tr>`;
+      const ovr       = playerOverall(p);
+      rosterHtml += `
+        <div class="player-card ${isStarter ? 'starter-card' : ''}" data-pid="${p.id}">
+          <div class="pc-identity">
+            <div class="pc-name">${p.name}</div>
+            <div class="pc-meta">${p.grade}年生 · ${POSITION_NAMES[p.position]}(${p.position})</div>
+            <div class="pc-badges">
+              ${isStarter ? '<span class="badge-st">スタメン</span>' : ''}
+              ${p.isAllRounder ? '<span class="badge-ar">全ラ</span>' : ''}
+            </div>
+          </div>
+          <div class="pc-ovr-block">
+            <div class="pc-ovr">${ovr}</div>
+            <div class="pc-ovr-label">OVR</div>
+          </div>
+          <div class="pc-stamina-pill">
+            <div class="pc-stamina-num" style="color:${sts.color}">${p.currentStamina}</div>
+            <div class="pc-stamina-text" style="color:${sts.color}">${sts.text}</div>
+          </div>
+        </div>`;
     });
-
-  rosterHtml += '</tbody></table></div>';
+  rosterHtml += '</div>';
 
   el.innerHTML = starterHtml + groupHtml + rosterHtml;
 
   // スタメン変更イベント
-  el.querySelectorAll('.starter-select').forEach(sel => {
+  el.querySelectorAll('.ssv2-select').forEach(sel => {
     sel.addEventListener('change', () => {
       const slot = sel.dataset.slot;
       const val  = sel.value ? parseInt(sel.value) : null;
@@ -352,8 +462,58 @@ function renderTeam(state) {
     });
   });
 
-  // 自動振り分け
   document.getElementById('btn-auto-group').addEventListener('click', () => window.onAutoGroup());
+
+  // 選手カードタップ → 詳細モーダル
+  el.querySelectorAll('.player-card').forEach(card => {
+    card.addEventListener('click', e => {
+      if (e.target.closest('select') || e.target.closest('input') || e.target.closest('label')) return;
+      const pid    = parseInt(card.dataset.pid);
+      const player = getPlayer(state, pid);
+      if (player) showPlayerDetail(player);
+    });
+  });
+}
+
+function showPlayerDetail(player) {
+  const modal = document.getElementById('modal');
+  const ovr   = playerOverall(player);
+  const paramRows = PARAM_KEYS.filter(k => k !== 'stamina').map(k => {
+    const val = player.params[k];
+    const cls = val >= 70 ? 'high' : (val < 30 ? 'low' : '');
+    return `<div class="pdc-param-item">
+      <span class="pdc-param-name">${PARAM_NAMES[k]}</span>
+      <span class="pdc-param-val ${cls}">${val}</span>
+    </div>`;
+  }).join('');
+
+  const sts = staminaStatus(player.currentStamina);
+  const pct = Math.round((player.currentStamina / player.maxStamina) * 100);
+
+  modal.innerHTML = `
+    <div class="modal-content" style="padding:0;overflow:hidden">
+      <div class="pdc-header">
+        <div class="pdc-name">${player.name}${player.isAllRounder ? ' <span class="badge-ar">全ラ</span>' : ''}</div>
+        <div class="pdc-meta-line">${player.grade}年生 / ${POSITION_NAMES[player.position]}(${player.position})</div>
+        <div class="pdc-ovr">${ovr}</div>
+        <div class="pdc-ovr-label">Overall</div>
+      </div>
+      <div class="pdc-body">
+        <div class="pdc-params-grid">${paramRows}</div>
+        <div class="stamina-compact-item" style="margin-bottom:16px">
+          <span class="sci-name">スタミナ</span>
+          <div class="sci-bar">
+            <div class="sci-bar-fill" style="width:${pct}%;background:${sts.color}"></div>
+          </div>
+          <span class="sci-val">${player.currentStamina}</span>
+          <span class="sci-status" style="color:${sts.color}">${sts.text}</span>
+        </div>
+        <button id="modal-close" class="btn-primary btn-full">閉じる</button>
+      </div>
+    </div>`;
+
+  modal.style.display = 'flex';
+  document.getElementById('modal-close').addEventListener('click', () => modal.style.display = 'none');
 }
 
 // ==============================
@@ -363,53 +523,74 @@ function renderPractice(state) {
   const el = document.getElementById('tab-home');
   const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
   const menus = getAvailablePracticeMenus(state.reputation);
-  const eff = getPracticeEfficiency(state);
+  const eff   = getPracticeEfficiency(state);
 
-  let html = `<div class="section-title">練習メニュー設定</div>
-    <div class="efficiency-info">現在の練習効率: <strong>${Math.round(eff * 100)}%</strong>`;
+  let effDetail = '';
+  if (state.activeEfficiency) effDetail += ` / アイテム効果: 残${state.activeEfficiency.weeksLeft}週`;
+  if (state.facilities.length > 0) effDetail += ` / ${state.facilities.map(f => f.name).join('・')}`;
 
-  if (state.activeEfficiency) {
-    html += ` （アイテム効果: 残${state.activeEfficiency.weeksLeft}週）`;
-  }
-  if (state.facilities.length > 0) {
-    html += ` / 設備効果: ${state.facilities.map(f => f.name).join('、')}`;
-  }
-  html += '</div>';
+  let html = `
+    <div class="practice-screen-header">
+      <span class="psh-eff-label">練習効率${effDetail}</span>
+      <span class="psh-eff-value">${Math.round(eff * 100)}%</span>
+    </div>`;
 
   for (let gi = 0; gi < groupCount; gi++) {
     const selected = state.practiceSelections[gi] || '';
     const members  = state.practiceGroups[gi].map(id => getPlayer(state, id)).filter(Boolean);
 
-    html += `<div class="practice-group-block">
-      <div class="group-header">グループ${gi + 1} (${members.length}名: ${members.map(p => p.name).join('、')})</div>
-      <div class="menu-grid">`;
+    const memberPills = members.map(p => {
+      const sts = staminaStatus(p.currentStamina);
+      return `<div class="pgc-player-pill">
+        <div class="pgc-player-dot" style="background:${sts.color}"></div>
+        ${p.name.split(' ')[0]}(${p.currentStamina})
+      </div>`;
+    }).join('');
+
+    html += `
+      <div class="practice-group-card">
+        <div class="pgc-header">
+          <span class="pgc-title">グループ ${gi + 1}</span>
+          <span class="pgc-members-count">${members.length}名</span>
+        </div>
+        <div class="pgc-stamina-row">
+          ${memberPills || '<span style="font-size:0.72rem;color:var(--text2);padding:4px">選手未割り当て</span>'}
+        </div>
+        <div class="practice-menu-grid">`;
 
     menus.forEach(menu => {
       const isSelected = selected === menu.id;
-      html += `<label class="menu-card ${isSelected ? 'selected' : ''}">
-        <input type="radio" name="menu-${gi}" value="${menu.id}" ${isSelected ? 'checked' : ''} data-group="${gi}">
-        <div class="menu-name">${menu.name}</div>
-        <div class="menu-params">↑ ${menu.params.map(k => PARAM_NAMES[k]).join('・')}</div>
-        <div class="menu-cost">スタミナ消費: ${menu.staminaCost}</div>
-        <div class="menu-tier">Tier ${menu.tier}</div>
-      </label>`;
+      const tierCls = menu.tier === 3 ? 'tier-3' : (menu.tier === 2 ? 'tier-2' : '');
+      html += `
+        <label class="practice-menu-card ${isSelected ? 'selected' : ''}">
+          <input type="radio" name="menu-${gi}" value="${menu.id}" ${isSelected ? 'checked' : ''} data-group="${gi}">
+          <div class="pmc-name">${menu.name}</div>
+          <div class="pmc-params">↑ ${menu.params.map(k => PARAM_NAMES[k]).join('・')}</div>
+          <div>
+            <span class="pmc-tier-badge ${tierCls}">Tier${menu.tier}</span>
+            <span class="pmc-cost">消費${menu.staminaCost}</span>
+          </div>
+        </label>`;
     });
 
-    html += '</div></div>';
+    html += `</div></div>`;
   }
 
-  // スタミナ一覧
-  html += '<div class="section-title">選手スタミナ</div><div class="stamina-list">';
+  // スタミナ一覧（コンパクト版）
+  html += '<div class="section-title">選手スタミナ</div><div class="stamina-compact-list">';
   state.players.forEach(p => {
     const sts = staminaStatus(p.currentStamina);
     const pct = Math.round((p.currentStamina / p.maxStamina) * 100);
-    html += `<div class="stamina-item">
-      <span class="st-name">${p.name}</span>
-      <div class="st-bar-wrap">
-        <div class="st-bar" style="width:${pct}%;background:${sts.color}"></div>
-      </div>
-      <span class="st-val" style="color:${sts.color}">${p.currentStamina}/${p.maxStamina} ${sts.text}</span>
-    </div>`;
+    html += `
+      <div class="stamina-compact-item">
+        <span class="sci-name">${p.name.split(' ')[0]}</span>
+        <span class="sci-pos">${p.position}</span>
+        <div class="sci-bar">
+          <div class="sci-bar-fill" style="width:${pct}%;background:${sts.color}"></div>
+        </div>
+        <span class="sci-val">${p.currentStamina}</span>
+        <span class="sci-status" style="color:${sts.color}">${sts.text}</span>
+      </div>`;
   });
   html += '</div>';
 
@@ -420,15 +601,13 @@ function renderPractice(state) {
     html += '</div>';
   }
 
-  // 進行ボタン
-  html += `<div class="advance-area">
-    <button id="btn-advance" class="btn-primary btn-large">次の週へ進む</button>
-  </div>`;
-
   el.innerHTML = html;
 
-  // 進行ボタンイベント
-  document.getElementById('btn-advance')?.addEventListener('click', () => window.onAdvanceWeek());
+  // 常時固定の進む/試合ボタン
+  setActionFooter(`
+    <button id="btn-advance" class="btn-action-primary">次の週へ進む →</button>
+  `);
+  document.getElementById('btn-advance').addEventListener('click', () => window.onAdvanceWeek());
 
   // 練習メニュー選択イベント
   el.querySelectorAll('input[type="radio"]').forEach(radio => {
@@ -444,6 +623,7 @@ function renderPractice(state) {
 // ==============================
 function renderScout(state) {
   const el = document.getElementById('tab-scout');
+  setActionFooter('');
 
   // スカウトチケット確認
   const tickets = state.inventory.filter(i => i.effect === 'scout' || i.effect === 'scout_gold');
@@ -529,6 +709,7 @@ function showScoutResult(player) {
 // ==============================
 function renderShop(state) {
   const el = document.getElementById('tab-shop');
+  setActionFooter('');
 
   const availableItems = ITEMS.filter(i => i.minRep <= state.reputation);
   const availableFacs  = FACILITIES.filter(f => f.minRep <= state.reputation);
@@ -610,36 +791,56 @@ function showMatchResult(result) {
     return;
   }
 
-  const modal = document.getElementById('modal');
-  const bgClass = result.won ? 'result-win' : 'result-lose';
-  const sets = result.setResults.map(r => `第${r.setNum}セット ${r.scoreA}-${r.scoreB}`).join('\n');
+  const modal      = document.getElementById('modal');
+  const isWin      = result.won;
+  const headerClass = isWin ? 'win-header' : 'lose-header';
+  const setDetail  = result.setResults.map(r => `${r.scoreA}-${r.scoreB}`).join(' / ');
 
-  let logHtml = '';
-  if (result.log && result.log.length > 0) {
-    logHtml = '<div class="match-log-area">' +
-      result.log.map(l => `<div class="match-log-line">${l}</div>`).join('') +
-      '</div>';
-  }
+  const logHtml = (result.log || []).map(line => {
+    if (!line) return '';
+    if (line.startsWith('---') || line.startsWith('===')) {
+      return `<div class="log-line-section">${line}</div>`;
+    }
+    const isHighlight = /エース|ブロック！|決まった|強打/.test(line);
+    const isResultLine = /試合結果|終了/.test(line);
+    if (isResultLine)  return `<div class="log-line-result">${line}</div>`;
+    if (isHighlight)   return `<div class="log-line-highlight">${line}</div>`;
+    return `<div class="log-line-normal">${line}</div>`;
+  }).join('');
+
+  const repSign = result.repGain >= 0 ? '+' : '';
+  const repCls  = result.repGain >= 0 ? 'positive' : 'negative';
+  const champHtml = (isWin && state_ref && MATCH_SCHEDULE[state_ref.week] &&
+    state_ref.tournaments[MATCH_SCHEDULE[state_ref.week].tournament]?.champion)
+    ? `<div class="reward-chip"><div class="reward-chip-label">達成</div><div class="reward-chip-value positive">🏆 優勝！</div></div>`
+    : '';
 
   modal.innerHTML = `
-    <div class="modal-content ${bgClass}">
-      <h2>${result.matchName}</h2>
-      <div class="result-main">
-        <div class="result-badge ${result.won ? 'win' : 'lose'}">${result.won ? '勝利' : '敗戦'}</div>
-        <div class="result-score">${result.setsA} - ${result.setsB}</div>
-        <div class="result-sets">${result.setResults.map(r => `${r.scoreA}-${r.scoreB}`).join(' / ')}</div>
+    <div class="modal-content" style="padding:0;overflow:hidden">
+      <div class="match-result-header ${headerClass}">
+        <div class="mrhv-name">${result.matchName}</div>
+        <div class="mrhv-verdict">${isWin ? '勝利' : '敗戦'}</div>
+        <div class="mrhv-score">${result.setsA} - ${result.setsB}</div>
+        <div class="mrhv-sets">${setDetail}</div>
       </div>
-      <div class="result-rewards">
-        ${result.repGain >= 0 ? `評判ポイント +${result.repGain}` : `評判ポイント ${result.repGain}`}
-        ${result.shopGain ? ` ／ ショップポイント +${result.shopGain}` : ''}
-        ${result.won && state_ref.tournaments[MATCH_SCHEDULE[state_ref.week]?.tournament]?.champion
-          ? ' 🏆 優勝！' : ''}
+      <div class="match-result-body">
+        <div class="match-rewards-row">
+          <div class="reward-chip">
+            <div class="reward-chip-label">評判P</div>
+            <div class="reward-chip-value ${repCls}">${repSign}${result.repGain}</div>
+          </div>
+          ${result.shopGain ? `<div class="reward-chip">
+            <div class="reward-chip-label">ショップP</div>
+            <div class="reward-chip-value positive">+${result.shopGain}</div>
+          </div>` : ''}
+          ${champHtml}
+        </div>
+        <div class="log-toggle">
+          <button id="btn-log-toggle" class="btn-secondary">試合ログを見る</button>
+        </div>
+        <div id="match-log-detail" class="match-log-area-v2" style="display:none">${logHtml}</div>
+        <button id="modal-close" class="btn-action-primary" style="margin-top:4px">閉じる</button>
       </div>
-      <div class="log-toggle">
-        <button id="btn-log-toggle" class="btn-secondary">試合ログを見る</button>
-      </div>
-      <div id="match-log-detail" style="display:none">${logHtml}</div>
-      <button id="modal-close" class="btn-primary">閉じる</button>
     </div>`;
 
   modal.style.display = 'flex';
@@ -648,8 +849,8 @@ function showMatchResult(result) {
     window.onModalClose();
   });
   document.getElementById('btn-log-toggle').addEventListener('click', () => {
-    const detail = document.getElementById('match-log-detail');
-    detail.style.display = detail.style.display === 'none' ? 'block' : 'none';
+    const d = document.getElementById('match-log-detail');
+    d.style.display = d.style.display === 'none' ? 'block' : 'none';
   });
 }
 

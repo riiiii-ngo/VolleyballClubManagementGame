@@ -97,10 +97,23 @@ function startMainGame() {
         <span id="ui-date" class="header-date"></span>
         <button id="btn-logout" class="btn-logout" title="ログアウト">⏏</button>
       </div>
-      <div id="status-bar" class="header-status">
-        <span id="ui-rep"></span>
-        <span id="ui-points"></span>
-        <span id="ui-next"></span>
+      <div class="header-kpi-row">
+        <div class="kpi-chip">
+          <span class="kpi-label">評判</span>
+          <span id="ui-rep" class="kpi-value"></span>
+        </div>
+        <div class="kpi-chip">
+          <span class="kpi-label">ポイント</span>
+          <span id="ui-points" class="kpi-value"></span>
+        </div>
+        <div class="kpi-chip">
+          <span class="kpi-label">体力</span>
+          <span id="ui-team-stamina" class="kpi-value"></span>
+        </div>
+        <div class="kpi-chip" id="kpi-next-chip">
+          <span class="kpi-label">次の試合</span>
+          <span id="ui-next" class="kpi-value"></span>
+        </div>
       </div>
     </header>
     <main class="app-main">
@@ -141,6 +154,10 @@ function switchTab(tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tabId));
   document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === `tab-${tabId}`));
   renderTab(tabId);
+}
+
+function switchTabPublic(tabId) {
+  switchTab(tabId);
 }
 
 function renderAll() {
