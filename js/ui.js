@@ -132,7 +132,7 @@ function updateStatusBar(state) {
 }
 
 // ==============================
-// ホーム画面
+// ホーム画面（試合週用）
 // ==============================
 function renderHome(state) {
   const el = document.getElementById('tab-home');
@@ -143,10 +143,29 @@ function renderHome(state) {
   const isMatchWeek = matchInfo && tState && !tState.eliminated && !tState.champion;
   const isEliminatedMatchWeek = matchInfo && tState && tState.eliminated;
 
-  let weeklyInfo = '';
+  // 出場条件チェック
+  let qualified = true;
+  let qualCondition = '';
   if (isMatchWeek) {
+    if (matchInfo.tournament === 'interhigh' && !state.tournaments.prefectural.champion) {
+      qualified = false;
+      qualCondition = '出場条件：県大会優勝';
+    }
+    if (matchInfo.tournament === 'spring' && !state.tournaments.spring_prelim.champion) {
+      qualified = false;
+      qualCondition = '出場条件：春高予選優勝';
+    }
+  }
+
+  let weeklyInfo = '';
+  if (isMatchWeek && qualified) {
     weeklyInfo = `<div class="match-week-banner">
       <span class="banner-icon">🏐</span> 今週は <strong>${matchInfo.name}</strong>！
+    </div>`;
+  } else if (isMatchWeek && !qualified) {
+    weeklyInfo = `<div class="info-box condition-unmet">
+      <div style="font-weight:700;margin-bottom:4px">⚠ ${matchInfo.name}</div>
+      <div>${qualCondition}（未達成のため練習になります）</div>
     </div>`;
   } else if (isEliminatedMatchWeek) {
     weeklyInfo = `<div class="info-box muted">試合週ですが、${TOURNAMENT_NAMES[matchInfo.tournament]}は敗退済みです。練習に集中しましょう。</div>`;
@@ -159,18 +178,28 @@ function renderHome(state) {
     staminaWarning = `<div class="warning-box">⚠ スタミナ低下: ${lowStamina.map(p => p.name).join('、')}</div>`;
   }
 
-  // 練習グループ状況
-  const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
-  let practiceStatus = '<div class="section-title">練習状況</div><div class="group-status">';
-  for (let i = 0; i < groupCount; i++) {
-    const menuId = state.practiceSelections[i];
-    const menu = menuId ? getPracticeMenu(menuId) : null;
-    const cnt = state.practiceGroups[i].length;
-    practiceStatus += `<div class="group-chip ${menu ? 'active' : 'inactive'}">
-      G${i + 1}: ${menu ? menu.name : '未設定'} (${cnt}名)
+  // トーナメント状況
+  let tournamentHtml = '<div class="section-title">今年のトーナメント</div><div class="tournament-status">';
+  for (const [key, name] of Object.entries(TOURNAMENT_NAMES)) {
+    const ts = state.tournaments[key];
+    let status, cls;
+    // 出場条件表示
+    let condText = '';
+    if (key === 'interhigh' && !state.tournaments.prefectural.champion && !ts.eliminated && !ts.champion && ts.currentRound === 0) {
+      condText = '<span class="t-condition">条件: 県大会優勝</span>';
+    }
+    if (key === 'spring' && !state.tournaments.spring_prelim.champion && !ts.eliminated && !ts.champion && ts.currentRound === 0) {
+      condText = '<span class="t-condition">条件: 春高予選優勝</span>';
+    }
+    if (ts.champion) { status = '🏆 優勝！'; cls = 'champion'; }
+    else if (ts.eliminated) { status = '敗退'; cls = 'eliminated'; }
+    else { status = `${ts.currentRound}回戦突破`; cls = 'active'; }
+    tournamentHtml += `<div class="tournament-item ${cls}">
+      <span class="t-name">${name}${condText}</span>
+      <span class="t-status">${status}</span>
     </div>`;
   }
-  practiceStatus += '</div>';
+  tournamentHtml += '</div>';
 
   // 試合履歴（直近3件）
   let historyHtml = '';
@@ -187,21 +216,6 @@ function renderHome(state) {
     historyHtml += '</div>';
   }
 
-  // トーナメント状況
-  let tournamentHtml = '<div class="section-title">今年のトーナメント</div><div class="tournament-status">';
-  for (const [key, name] of Object.entries(TOURNAMENT_NAMES)) {
-    const ts = state.tournaments[key];
-    let status, cls;
-    if (ts.champion) { status = '優勝！'; cls = 'champion'; }
-    else if (ts.eliminated) { status = '敗退'; cls = 'eliminated'; }
-    else { status = `${ts.currentRound}回戦突破`; cls = 'active'; }
-    tournamentHtml += `<div class="tournament-item ${cls}">
-      <span class="t-name">${name}</span>
-      <span class="t-status">${status}</span>
-    </div>`;
-  }
-  tournamentHtml += '</div>';
-
   // 週次ログ
   let weekLogHtml = '';
   if (state.weeklyLog && state.weeklyLog.length > 0) {
@@ -210,24 +224,20 @@ function renderHome(state) {
     weekLogHtml += '</div>';
   }
 
+  const advanceBtnLabel = (isMatchWeek && qualified) ? `試合へ: ${matchInfo.name}` : '次の週へ進む';
+  const advanceBtnClass = (isMatchWeek && qualified) ? 'btn-match' : '';
+
   el.innerHTML = `
     ${weeklyInfo}
     ${staminaWarning}
-    <div class="home-grid">
-      <div class="home-col">
-        ${practiceStatus}
-        ${tournamentHtml}
-      </div>
-      <div class="home-col">
-        ${weekLogHtml}
-        ${historyHtml}
-      </div>
-    </div>
+    ${tournamentHtml}
+    ${weekLogHtml}
+    ${historyHtml}
     <div class="advance-area">
-      <button id="btn-advance" class="btn-primary btn-large ${isMatchWeek ? 'btn-match' : ''}">
-        ${isMatchWeek ? `試合へ: ${matchInfo.name}` : '次の週へ進む'}
+      <button id="btn-advance" class="btn-primary btn-large ${advanceBtnClass}">
+        ${advanceBtnLabel}
       </button>
-      ${isMatchWeek ? `<div class="match-note">スタメン設定: ${isStarterComplete(state) ? '完了' : '<span class="warn">未完了</span>'}</div>` : ''}
+      ${(isMatchWeek && qualified) ? `<div class="match-note">スタメン設定: ${isStarterComplete(state) ? '完了' : '<span class="warn">未完了</span>'}</div>` : ''}
     </div>
   `;
 
@@ -350,7 +360,7 @@ function renderTeam(state) {
 // 練習画面
 // ==============================
 function renderPractice(state) {
-  const el = document.getElementById('tab-practice');
+  const el = document.getElementById('tab-home');
   const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
   const menus = getAvailablePracticeMenus(state.reputation);
   const eff = getPracticeEfficiency(state);
@@ -403,7 +413,22 @@ function renderPractice(state) {
   });
   html += '</div>';
 
+  // 週次ログ
+  if (state.weeklyLog && state.weeklyLog.length > 0) {
+    html += '<div class="section-title">先週の出来事</div><div class="weekly-log">';
+    state.weeklyLog.forEach(l => { html += `<div class="log-line">${l}</div>`; });
+    html += '</div>';
+  }
+
+  // 進行ボタン
+  html += `<div class="advance-area">
+    <button id="btn-advance" class="btn-primary btn-large">次の週へ進む</button>
+  </div>`;
+
   el.innerHTML = html;
+
+  // 進行ボタンイベント
+  document.getElementById('btn-advance')?.addEventListener('click', () => window.onAdvanceWeek());
 
   // 練習メニュー選択イベント
   el.querySelectorAll('input[type="radio"]').forEach(radio => {

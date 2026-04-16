@@ -1,0 +1,34 @@
+{
+  "teams": [
+    {
+      "id": "weak_team",
+      "name": "弱小校",
+      "level": "weak",
+      "stats": { "attack": 35, "defense": 35, "serve": 35, "receive": 35, "stamina": 35 }
+    },
+    {
+      "id": "normal_team",
+      "name": "中堅校",
+      "level": "normal",
+      "stats": { "attack": 55, "defense": 55, "serve": 55, "receive": 55, "stamina": 55 }
+    },
+    {
+      "id": "strong_team",
+      "name": "強豪校",
+      "level": "strong",
+      "stats": { "attack": 75, "defense": 75, "serve": 75, "receive": 75, "stamina": 75 }
+    },
+    {
+      "id": "elite_team",
+      "name": "全国強豪校",
+      "level": "elite",
+      "stats": { "attack": 85, "defense": 85, "serve": 85, "receive": 85, "stamina": 85 }
+    },
+    {
+      "id": "pro_team",
+      "name": "プロ養成校",
+      "level": "pro",
+      "stats": { "attack": 95, "defense": 95, "serve": 95, "receive": 95, "stamina": 95 }
+    }
+  ]
+}

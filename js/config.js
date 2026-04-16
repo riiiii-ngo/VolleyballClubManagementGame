@@ -26,7 +26,7 @@ const PARAM_NAMES = {
 // 評判
 const REPUTATIONS = ['弱小', '普通', '強豪', '名門', 'プロ養成校'];
 const REPUTATION_THRESHOLDS = [0, 50, 150, 300, 500];
-const REPUTATION_COLORS = ['#888', '#4CAF50', '#2196F3', '#FF9800', '#E91E63'];
+const REPUTATION_COLORS = ['#8E8E93', '#34C759', '#007AFF', '#FF9500', '#FF2D55'];
 
 // 格下負けペナルティ倍率
 const REP_POINTS_LOSS_PENALTY = 1.5;
@@ -94,6 +94,7 @@ let REP_POINTS_WIN  = {};
 let MATCH_POINTS_WIN = {};
 let MONTHS          = [];
 let MONTH_NAMES     = {};
+let ENEMIES         = [];
 
 /**
  * data/*.json を並列fetchしてグローバル変数に代入する
@@ -102,10 +103,11 @@ let MONTH_NAMES     = {};
 async function loadMasterData() {
   const base = getBasePath();
 
-  const [itemsData, menusData, scheduleData] = await Promise.all([
+  const [itemsData, menusData, scheduleData, enemiesData] = await Promise.all([
     fetch(`${base}data/items.json`).then(r => r.json()),
     fetch(`${base}data/practice_menus.json`).then(r => r.json()),
     fetch(`${base}data/schedule.json`).then(r => r.json()),
+    fetch(`${base}data/enemies.json`).then(r => r.json()),
   ]);
 
   // アイテム・設備
@@ -124,6 +126,9 @@ async function loadMasterData() {
   MATCH_POINTS_WIN = scheduleData.matchPointsWin;
   MONTHS           = scheduleData.months;
   MONTH_NAMES      = scheduleData.monthNames;
+
+  // 敵チーム
+  ENEMIES = enemiesData.teams;
 }
 
 /**

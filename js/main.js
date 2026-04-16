@@ -91,30 +91,38 @@ window.onContinue = async function() {
 function startMainGame() {
   setStateRef(G);
   document.getElementById('app').innerHTML = `
-    <header>
-      <div class="header-title">🏐 バレー部育成ゲーム</div>
-      <div id="status-bar">
-        <span id="ui-date"></span>
+    <header class="app-header">
+      <div class="header-row">
+        <span class="header-team">🏐 バレー部</span>
+        <span id="ui-date" class="header-date"></span>
+        <button id="btn-logout" class="btn-logout" title="ログアウト">⏏</button>
+      </div>
+      <div id="status-bar" class="header-status">
         <span id="ui-rep"></span>
         <span id="ui-points"></span>
         <span id="ui-next"></span>
-        <button id="btn-logout" class="btn-logout" title="ログアウト">⏏</button>
       </div>
     </header>
-    <nav class="tab-nav">
-      <button class="tab-btn active" data-tab="home">ホーム</button>
-      <button class="tab-btn" data-tab="team">チーム</button>
-      <button class="tab-btn" data-tab="practice">練習</button>
-      <button class="tab-btn" data-tab="scout">スカウト</button>
-      <button class="tab-btn" data-tab="shop">ショップ</button>
-    </nav>
-    <main>
-      <div id="tab-home"     class="tab-content active"></div>
-      <div id="tab-team"     class="tab-content"></div>
-      <div id="tab-practice" class="tab-content"></div>
-      <div id="tab-scout"    class="tab-content"></div>
-      <div id="tab-shop"     class="tab-content"></div>
+    <main class="app-main">
+      <div id="tab-home"  class="tab-content active"></div>
+      <div id="tab-team"  class="tab-content"></div>
+      <div id="tab-scout" class="tab-content"></div>
+      <div id="tab-shop"  class="tab-content"></div>
     </main>
+    <nav class="tab-nav">
+      <button class="tab-btn active" data-tab="home">
+        <span class="tab-icon">🏠</span><span class="tab-label">ホーム</span>
+      </button>
+      <button class="tab-btn" data-tab="team">
+        <span class="tab-icon">👥</span><span class="tab-label">チーム</span>
+      </button>
+      <button class="tab-btn" data-tab="scout">
+        <span class="tab-icon">🔍</span><span class="tab-label">スカウト</span>
+      </button>
+      <button class="tab-btn" data-tab="shop">
+        <span class="tab-icon">🛒</span><span class="tab-label">ショップ</span>
+      </button>
+    </nav>
     <div id="modal" class="modal-overlay" style="display:none"></div>
   `;
 
@@ -137,15 +145,31 @@ function switchTab(tabId) {
 
 function renderAll() {
   updateStatusBar(G);
-  renderHome(G);
+  renderTab('home');
 }
 
 function renderTab(tabId) {
   updateStatusBar(G);
   switch (tabId) {
-    case 'home':     renderHome(G);     break;
+    case 'home': {
+      // ホームタブは試合週か練習週かで表示を分ける
+      const matchInfo = MATCH_SCHEDULE[G.week];
+      const tState = matchInfo ? G.tournaments[matchInfo.tournament] : null;
+      const isMatchWeek = matchInfo && tState && !tState.eliminated && !tState.champion;
+      // 出場条件も考慮（未達成なら練習画面を表示）
+      let qualified = true;
+      if (isMatchWeek) {
+        if (matchInfo.tournament === 'interhigh' && !G.tournaments.prefectural.champion) qualified = false;
+        if (matchInfo.tournament === 'spring' && !G.tournaments.spring_prelim.champion) qualified = false;
+      }
+      if (isMatchWeek && qualified) {
+        renderHome(G); // 試合画面を表示
+      } else {
+        renderPractice(G); // 練習画面をHomeに描画
+      }
+      break;
+    }
     case 'team':     renderTeam(G);     break;
-    case 'practice': renderPractice(G); break;
     case 'scout':    renderScout(G);    break;
     case 'shop':     renderShop(G);     break;
   }
@@ -175,7 +199,13 @@ window.onAdvanceWeek = function() {
   const tState = matchInfo ? G.tournaments[matchInfo.tournament] : null;
   const isMatchWeek = matchInfo && tState && !tState.eliminated && !tState.champion;
 
+  let qualified = true;
   if (isMatchWeek) {
+    if (matchInfo.tournament === 'interhigh' && !G.tournaments.prefectural.champion) qualified = false;
+    if (matchInfo.tournament === 'spring' && !G.tournaments.spring_prelim.champion) qualified = false;
+  }
+
+  if (isMatchWeek && qualified) {
     // 試合週
     if (!isStarterComplete(G)) {
       showAlert('スタメンが揃っていません。チーム設定でスタメンを設定してください。');
@@ -186,18 +216,20 @@ window.onAdvanceWeek = function() {
     setStateRef(G);
     showMatchResult(result);
   } else {
-    // 練習週 or 敗退済み試合週
+    // 練習週 or 敗退済み試合週 or 出場未達成週
     G.weeklyLog = [];
-    const isEliminatedMatchWeek = matchInfo && tState && tState.eliminated;
+    const isEliminated = matchInfo && tState && tState.eliminated;
+    const isUnqualified = isMatchWeek && !qualified;
 
-    if (!isEliminatedMatchWeek) {
-      // 通常練習
-      const practiceLogs = executePractice(G);
-      G.weeklyLog.push(...practiceLogs);
-    } else {
+    if (isEliminated) {
       // 敗退済み試合週は休養
       G.weeklyLog.push('試合週（敗退済み）。スタミナが少し回復した。');
       executeRestWeek(G);
+    } else {
+      // 通常練習
+      const practiceLogs = executePractice(G);
+      if (isUnqualified) G.weeklyLog.push('大会出場条件を満たしていないため練習を行いました。');
+      G.weeklyLog.push(...practiceLogs);
     }
 
     advanceWeekEffects(G);
@@ -210,7 +242,10 @@ window.onAdvanceWeek = function() {
 
     saveGame(G);
     setStateRef(G);
-    renderAll();
+    
+    // UIを現在のタブで再描画
+    const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
+    renderTab(activeTab);
   }
 };
 
@@ -269,7 +304,12 @@ window.onStarterChange = function(slot, playerId) {
   }
   G.starters[slot] = playerId;
   saveGame(G);
+  const container = document.getElementById('tab-team');
+  const scrollY = container ? container.scrollTop : 0;
+  const pageScrollY = window.scrollY;
   renderTeam(G);
+  if (container) container.scrollTop = scrollY;
+  window.scrollTo(0, pageScrollY);
   updateStatusBar(G);
 };
 
@@ -286,7 +326,13 @@ window.onGroupChange = function(groupIndex, playerId, checked) {
     G.practiceGroups[groupIndex].push(playerId);
   }
   saveGame(G);
+  // スクロール位置を保持して再描画
+  const container = document.getElementById('tab-team');
+  const scrollY = container ? container.scrollTop : 0;
+  const pageScrollY = window.scrollY;
   renderTeam(G);
+  if (container) container.scrollTop = scrollY;
+  window.scrollTo(0, pageScrollY);
 };
 
 window.onAutoGroup = function() {

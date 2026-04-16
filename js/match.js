@@ -5,20 +5,45 @@
 // ==============================
 // 対戦相手チーム生成
 // ==============================
+function getEnemyTeamId(tournament, round) {
+  if (tournament === 'prefectural' || tournament === 'spring_prelim') {
+    if (round === 0) return 'weak_team';
+    if (round === 1) return 'normal_team';
+    return 'strong_team';
+  } else {
+    // interhigh, spring
+    if (round === 0) return 'normal_team';
+    if (round === 1) return 'strong_team';
+    return Math.random() < 0.5 ? 'elite_team' : 'pro_team';
+  }
+}
+
 function generateOpponent(tournament, round, year, reputation) {
-  const base = OPPONENT_STRENGTH[tournament][round];
-  // 評判・年数によるスケール
-  const repBonus = reputation * 3;
-  const yearBonus = (year - 1) * 4;
-  const avgStat = base + repBonus * 0.4 + yearBonus;
+  const enemyId = getEnemyTeamId(tournament, round);
+  const teamDef = ENEMIES.find(e => e.id === enemyId) || ENEMIES[0];
+  const stats = teamDef.stats;
+
+  const getStat = (key) => {
+    switch (key) {
+      case 'spike': return stats.attack;
+      case 'power': return stats.attack;
+      case 'block': return stats.defense;
+      case 'receive': return stats.receive;
+      case 'serve': return stats.serve;
+      case 'toss': return (stats.attack + stats.receive) / 2;
+      case 'speed': return (stats.attack + stats.defense) / 2;
+      case 'technique': return (stats.attack + stats.serve) / 2;
+      default: return 50;
+    }
+  };
 
   const oPositions = ['OH','OH','MB','MB','OP','Se','Li'];
   const players = oPositions.map((pos, i) => {
-    const noise = () => Math.floor(Math.random() * 12) - 6;
+    const noise = () => Math.floor(Math.random() * 10) - 5;
     const params = {};
     PARAM_KEYS.forEach(k => {
       if (k === 'stamina') { params[k] = 90; return; }
-      params[k] = clamp(avgStat + noise());
+      params[k] = clamp(getStat(k) + noise());
     });
     // ポジション補正
     const growth = POSITION_GROWTH_PARAMS[pos] || [];
@@ -37,7 +62,7 @@ function generateOpponent(tournament, round, year, reputation) {
   });
 
   const teamAvg = players.reduce((s, p) => s + playerOverall(p), 0) / players.length;
-  return { players, name: '対戦相手', avgStat: Math.round(teamAvg) };
+  return { players, name: teamDef.name, avgStat: Math.round(teamAvg) };
 }
 
 // ==============================

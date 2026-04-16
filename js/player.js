@@ -182,7 +182,16 @@ function applyParamGrowth(player, params, baseGrowth, efficiency) {
 
   params.forEach(key => {
     if (key === 'stamina') return; // スタミナは別管理
-    let growth = baseGrowth * efficiency * staminaFactor;
+
+    // 現在のステータスに応じた基本成長量
+    const currentVal = player.params[key] || 1;
+    let statGrowth = 3;
+    if (currentVal >= 80) statGrowth = 0.5;
+    else if (currentVal >= 60) statGrowth = 1;
+    else if (currentVal >= 30) statGrowth = 2;
+
+    // baseGrowth(Tier1=2)を基準にスケーリング
+    let growth = statGrowth * (baseGrowth / 2) * efficiency * staminaFactor;
 
     // ポジション適性ボーナス
     if (isAllRounder || posGrowth.includes(key)) {
