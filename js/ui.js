@@ -527,12 +527,6 @@ function renderStarterSettings(state) {
     { slot: 'Li',  label: 'リベロ' },
   ];
 
-  let starterHtml = `
-    <div class="sub-screen-header">
-      <button class="btn-back" id="btn-back-starters"><span>&lt; 戻る</span></button>
-      <div class="sub-screen-title">スタメン設定</div>
-    </div>
-    <div class="starters-grid">`;
   const starterComplete = isStarterComplete(state);
   let starterHtml = `
     <div class="team-section-header">
@@ -569,89 +563,11 @@ function renderStarterSettings(state) {
 
   document.getElementById('btn-back-starters').addEventListener('click', () => { teamScreenMode = 'menu'; renderTeam(state); });
 
-  container.querySelectorAll('.starter-select').forEach(sel => {
-
-  for (let gi = 0; gi < groupCount; gi++) {
-    groupHtml += `
-      <div class="group-col">
-        <div class="group-header">グループ${gi + 1}</div>
-        <div class="group-players" id="group-${gi}">`;
-    state.players.forEach(p => {
-      const inGroup = state.practiceGroups[gi].includes(p.id);
-      groupHtml += `
-        <label class="player-check">
-          <input type="checkbox" class="group-check" data-group="${gi}" data-pid="${p.id}" ${inGroup ? 'checked' : ''}>
-          ${p.name} (${p.grade}年 ${p.position})
-        </label>`;
-    });
-    groupHtml += '</div></div>';
-  }
-  groupHtml += '</div>';
-
-  // 選手カードリスト
-  let rosterHtml = `
-    <div class="team-section-header">
-      <span class="team-section-label">選手一覧 <small style="font-weight:400;text-transform:none">(タップで詳細)</small></span>
-    </div>
-    <div class="player-card-list">`;
-
-  state.players
-    .sort((a, b) => b.grade - a.grade || playerOverall(b) - playerOverall(a))
-    .forEach(p => {
-      const sts       = staminaStatus(p.currentStamina);
-      const isStarter = Object.values(state.starters).includes(p.id);
-      const ovr       = playerOverall(p);
-      rosterHtml += `
-        <div class="player-card ${isStarter ? 'starter-card' : ''}" data-pid="${p.id}">
-          <div class="pc-identity">
-            <div class="pc-name">${p.name}</div>
-            <div class="pc-meta">${p.grade}年生 · ${POSITION_NAMES[p.position]}(${p.position})</div>
-            <div class="pc-badges">
-              ${isStarter ? '<span class="badge-st">スタメン</span>' : ''}
-              ${p.isAllRounder ? '<span class="badge-ar">全ラ</span>' : ''}
-            </div>
-          </div>
-          <div class="pc-ovr-block">
-            <div class="pc-ovr">${ovr}</div>
-            <div class="pc-ovr-label">OVR</div>
-          </div>
-          <div class="pc-stamina-pill">
-            <div class="pc-stamina-num" style="color:${sts.color}">${p.currentStamina}</div>
-            <div class="pc-stamina-text" style="color:${sts.color}">${sts.text}</div>
-          </div>
-        </div>`;
-    });
-  rosterHtml += '</div>';
-
-  el.innerHTML = starterHtml + groupHtml + rosterHtml;
-
-  // スタメン変更イベント
-  el.querySelectorAll('.ssv2-select').forEach(sel => {
+  container.querySelectorAll('.ssv2-select').forEach(sel => {
     sel.addEventListener('change', () => {
       const slot = sel.dataset.slot;
       const val  = sel.value ? parseInt(sel.value) : null;
       window.onStarterChange(slot, val);
-    });
-  });
-
-  // グループ変更イベント
-  el.querySelectorAll('.group-check').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const gi  = parseInt(cb.dataset.group);
-      const pid = parseInt(cb.dataset.pid);
-      window.onGroupChange(gi, pid, cb.checked);
-    });
-  });
-
-  document.getElementById('btn-auto-group').addEventListener('click', () => window.onAutoGroup());
-
-  // 選手カードタップ → 詳細モーダル
-  el.querySelectorAll('.player-card').forEach(card => {
-    card.addEventListener('click', e => {
-      if (e.target.closest('select') || e.target.closest('input') || e.target.closest('label')) return;
-      const pid    = parseInt(card.dataset.pid);
-      const player = getPlayer(state, pid);
-      if (player) showPlayerDetail(player);
     });
   });
 }
