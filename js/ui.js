@@ -315,20 +315,6 @@ function renderHome(state) {
   }
 
   el.innerHTML = `
-<<<<<<< HEAD
-    <div class="home-floating-ui">
-      <div>
-        ${weeklyInfo}
-        ${staminaWarning}
-      </div>
-      <div class="home-action-area">
-        <button id="btn-advance" class="btn-primary btn-large ${advanceBtnClass}">
-          ${advanceBtnLabel}
-        </button>
-        ${(isMatchWeek && qualified) ? `<div class="match-note">スタメン設定: ${isStarterComplete(state) ? '完了' : '<span class="warn">未完了</span>'}</div>` : ''}
-      </div>
-    </div>
-=======
     ${situationHtml}
     ${staminaWarnHtml}
     ${teamStaminaHtml}
@@ -340,7 +326,6 @@ function renderHome(state) {
     ${tournamentHtml}
     ${weekLogHtml}
     ${historyHtml}
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
   `;
 
   // action-footer に進むボタン
@@ -360,7 +345,6 @@ let teamScreenMode = 'menu'; // 'menu', 'roster', 'starters'
 
 function renderTeam(state) {
   const el = document.getElementById('tab-team');
-<<<<<<< HEAD
   el.innerHTML = '<div class="panel-view" id="team-screen-content"></div>';
   
   if (teamScreenMode === 'roster') {
@@ -534,9 +518,7 @@ function renderPlayerList(state) {
 
 function renderStarterSettings(state) {
   const container = document.getElementById('team-screen-content');
-=======
   setActionFooter('');
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
 
   const slotDefs = [
     { slot: 'OH1', label: 'OH①' }, { slot: 'OH2', label: 'OH②' },
@@ -545,14 +527,12 @@ function renderStarterSettings(state) {
     { slot: 'Li',  label: 'リベロ' },
   ];
 
-<<<<<<< HEAD
   let starterHtml = `
     <div class="sub-screen-header">
       <button class="btn-back" id="btn-back-starters"><span>&lt; 戻る</span></button>
       <div class="sub-screen-title">スタメン設定</div>
     </div>
     <div class="starters-grid">`;
-=======
   const starterComplete = isStarterComplete(state);
   let starterHtml = `
     <div class="team-section-header">
@@ -563,7 +543,6 @@ function renderStarterSettings(state) {
     </div>
     <div class="starter-grid-v2">`;
 
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
   slotDefs.forEach(def => {
     const pid     = state.starters[def.slot];
     const posName = def.slot.replace(/[0-9]/g, '');
@@ -575,38 +554,22 @@ function renderStarterSettings(state) {
           ${state.players
             .filter(p => p.position === posName || p.isAllRounder)
             .sort((a, b) => b.grade - a.grade || playerOverall(b) - playerOverall(a))
-<<<<<<< HEAD
             .map(p => {
               const injLabel = p.isInjured ? ` 🩼ケガ中(あと${p.injuryRemainingWeeks}週)` : '';
               return `<option value="${p.id}" ${pid === p.id ? 'selected' : ''} ${p.isInjured ? 'disabled' : ''}>
               ${p.name}${injLabel} (${p.grade}年 OVR:${playerOverall(p)})
             </option>`;
             }).join('')}
-=======
-            .map(p => `<option value="${p.id}" ${pid === p.id ? 'selected' : ''}>
-              ${p.name} (${p.grade}年)
-            </option>`).join('')}
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
         </select>
       </div>`;
   });
   starterHtml += '</div>';
 
-<<<<<<< HEAD
   container.innerHTML = starterHtml;
 
   document.getElementById('btn-back-starters').addEventListener('click', () => { teamScreenMode = 'menu'; renderTeam(state); });
 
   container.querySelectorAll('.starter-select').forEach(sel => {
-=======
-  // 練習グループ設定
-  const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
-  let groupHtml = `
-    <div class="team-section-header">
-      <span class="team-section-label">練習グループ</span>
-      <button class="team-section-action" id="btn-auto-group">自動振り分け</button>
-    </div>
-    <div class="group-grid">`;
 
   for (let gi = 0; gi < groupCount; gi++) {
     groupHtml += `
@@ -664,15 +627,12 @@ function renderStarterSettings(state) {
 
   // スタメン変更イベント
   el.querySelectorAll('.ssv2-select').forEach(sel => {
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
     sel.addEventListener('change', () => {
       const slot = sel.dataset.slot;
       const val  = sel.value ? parseInt(sel.value) : null;
       window.onStarterChange(slot, val);
     });
   });
-<<<<<<< HEAD
-=======
 
   // グループ変更イベント
   el.querySelectorAll('.group-check').forEach(cb => {
@@ -735,7 +695,6 @@ function showPlayerDetail(player) {
 
   modal.style.display = 'flex';
   document.getElementById('modal-close').addEventListener('click', () => modal.style.display = 'none');
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
 }
 
 // ==============================
@@ -792,7 +751,6 @@ function renderPractice(state) {
   const menus = getAvailablePracticeMenus(state.reputation);
   const eff   = getPracticeEfficiency(state);
 
-<<<<<<< HEAD
   // グループインデックスが範囲外なら補正
   if (practiceSelectedGroup >= groupCount) practiceSelectedGroup = 0;
 
@@ -801,17 +759,6 @@ function renderPractice(state) {
   const selectedMenu = menus.find(m => m.id === selectedMenuId);
   const targetStat = selectedMenu ? selectedMenu.params[0] : 'spike';
   const targetStatName = PARAM_NAMES[targetStat] || targetStat;
-=======
-  let effDetail = '';
-  if (state.activeEfficiency) effDetail += ` / アイテム効果: 残${state.activeEfficiency.weeksLeft}週`;
-  if (state.facilities.length > 0) effDetail += ` / ${state.facilities.map(f => f.name).join('・')}`;
-
-  let html = `
-    <div class="practice-screen-header">
-      <span class="psh-eff-label">練習効率${effDetail}</span>
-      <span class="psh-eff-value">${Math.round(eff * 100)}%</span>
-    </div>`;
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
 
   // ────────────────────────────────────────
   // ① 選手一覧カード (フィルタリングと動的ステータス)
@@ -821,7 +768,6 @@ function renderPractice(state) {
     grp.forEach(pid => { playerGroupMap[pid] = gi; });
   });
 
-<<<<<<< HEAD
   // 選択中グループに所属する選手のみに絞り込む
   const filteredPlayers = state.players.filter(p => playerGroupMap[p.id] === practiceSelectedGroup);
 
@@ -918,62 +864,7 @@ function renderPractice(state) {
       </div>
     </div>`;
   }).join('');
-=======
-    const memberPills = members.map(p => {
-      const sts = staminaStatus(p.currentStamina);
-      return `<div class="pgc-player-pill">
-        <div class="pgc-player-dot" style="background:${sts.color}"></div>
-        ${p.name.split(' ')[0]}(${p.currentStamina})
-      </div>`;
-    }).join('');
 
-    html += `
-      <div class="practice-group-card">
-        <div class="pgc-header">
-          <span class="pgc-title">グループ ${gi + 1}</span>
-          <span class="pgc-members-count">${members.length}名</span>
-        </div>
-        <div class="pgc-stamina-row">
-          ${memberPills || '<span style="font-size:0.72rem;color:var(--text2);padding:4px">選手未割り当て</span>'}
-        </div>
-        <div class="practice-menu-grid">`;
-
-    menus.forEach(menu => {
-      const isSelected = selected === menu.id;
-      const tierCls = menu.tier === 3 ? 'tier-3' : (menu.tier === 2 ? 'tier-2' : '');
-      html += `
-        <label class="practice-menu-card ${isSelected ? 'selected' : ''}">
-          <input type="radio" name="menu-${gi}" value="${menu.id}" ${isSelected ? 'checked' : ''} data-group="${gi}">
-          <div class="pmc-name">${menu.name}</div>
-          <div class="pmc-params">↑ ${menu.params.map(k => PARAM_NAMES[k]).join('・')}</div>
-          <div>
-            <span class="pmc-tier-badge ${tierCls}">Tier${menu.tier}</span>
-            <span class="pmc-cost">消費${menu.staminaCost}</span>
-          </div>
-        </label>`;
-    });
-
-    html += `</div></div>`;
-  }
-
-  // スタミナ一覧（コンパクト版）
-  html += '<div class="section-title">選手スタミナ</div><div class="stamina-compact-list">';
-  state.players.forEach(p => {
-    const sts = staminaStatus(p.currentStamina);
-    const pct = Math.round((p.currentStamina / p.maxStamina) * 100);
-    html += `
-      <div class="stamina-compact-item">
-        <span class="sci-name">${p.name.split(' ')[0]}</span>
-        <span class="sci-pos">${p.position}</span>
-        <div class="sci-bar">
-          <div class="sci-bar-fill" style="width:${pct}%;background:${sts.color}"></div>
-        </div>
-        <span class="sci-val">${p.currentStamina}</span>
-        <span class="sci-status" style="color:${sts.color}">${sts.text}</span>
-      </div>`;
-  });
-  html += '</div>';
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
 
   // ────────────────────────────────────────
   // ② 練習メニューカード
@@ -990,7 +881,6 @@ function renderPractice(state) {
     </div>`;
   }).join('');
 
-<<<<<<< HEAD
   // ────────────────────────────────────────
   // ③ グループセレクター
   // ────────────────────────────────────────
@@ -1025,15 +915,6 @@ function renderPractice(state) {
       }
     </style>
     <div class="practice-screen">
-=======
-  el.innerHTML = html;
-
-  // 常時固定の進む/試合ボタン
-  setActionFooter(`
-    <button id="btn-advance" class="btn-action-primary">次の週へ進む →</button>
-  `);
-  document.getElementById('btn-advance').addEventListener('click', () => window.onAdvanceWeek());
->>>>>>> 8e8639c0492a03e99d24f22df4fb39470dbf03ba
 
       <!-- ① 選手一覧エリア -->
       <div class="practice-players-area">

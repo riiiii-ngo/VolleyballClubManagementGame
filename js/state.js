@@ -77,9 +77,10 @@ async function loadGame(userId = null) {
   try {
     const dbState = await loadFromDB(userId);
     if (dbState) {
+      const migrated = migrateState(dbState);
       // ローカルキャッシュも更新
-      localStorage.setItem(SAVE_KEY, JSON.stringify(dbState));
-      return dbState;
+      localStorage.setItem(SAVE_KEY, JSON.stringify(migrated));
+      return migrated;
     }
   } catch(e) {
     console.error('Supabase load failed, falling back to localStorage:', e);
@@ -87,11 +88,30 @@ async function loadGame(userId = null) {
   // フォールバック: localStorage
   try {
     const raw = localStorage.getItem(SAVE_KEY);
-    if (raw) return JSON.parse(raw);
+    if (raw) {
+      const state = JSON.parse(raw);
+      return migrateState(state);
+    }
   } catch(e) {
     console.error('localStorage load failed:', e);
   }
   return null;
+}
+
+/**
+ * 状態の互換性を確保する (新フィールドの追加など)
+ */
+function migrateState(state) {
+  if (!state) return state;
+  const def = createDefaultState();
+  
+  // restingPlayerIds の初期化
+  if (state.restingPlayerIds === undefined) {
+    state.restingPlayerIds = [];
+  }
+  
+  // その他の将来的なフィールド追加にも対応しやすいように
+  return state;
 }
 
 /**
