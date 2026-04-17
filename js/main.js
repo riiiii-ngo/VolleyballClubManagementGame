@@ -103,6 +103,10 @@ function startMainGame() {
         <span id="ui-next"></span>
       </div>
     </header>
+    <div class="game-visual-area">
+      <div class="bg-image"></div>
+      <img src="assets/chara_manager.png" class="chara-image" alt="">
+    </div>
     <main class="app-main">
       <div id="tab-home"  class="tab-content active"></div>
       <div id="tab-team"  class="tab-content"></div>
@@ -227,9 +231,10 @@ window.onAdvanceWeek = function() {
       executeRestWeek(G);
     } else {
       // 通常練習
-      const practiceLogs = executePractice(G);
+      const { logs, results } = executePractice(G);
       if (isUnqualified) G.weeklyLog.push('大会出場条件を満たしていないため練習を行いました。');
-      G.weeklyLog.push(...practiceLogs);
+      G.weeklyLog.push(...logs);
+      G.weeklyResults = results; // UI表示用に保存
     }
 
     advanceWeekEffects(G);
@@ -240,12 +245,12 @@ window.onAdvanceWeek = function() {
       return;
     }
 
-    saveGame(G);
+    // 保存とモーダル表示を開始
     setStateRef(G);
-    
-    // UIを現在のタブで再描画
-    const activeTab = document.querySelector('.tab-btn.active').dataset.tab;
-    renderTab(activeTab);
+    showPracticeResult(G.weeklyResults || [], G.weeklyLog || []);
+
+    // 翌週のために休憩状態を解除
+    G.restingPlayerIds = [];
   }
 };
 
@@ -262,6 +267,7 @@ window.onModalClose = function() {
     return;
   }
 
+  G.restingPlayerIds = []; // 翌週のためにリセット
   saveGame(G);
   setStateRef(G);
   renderAll();
@@ -347,6 +353,23 @@ window.onAutoGroup = function() {
 window.onPracticeSelect = function(groupIndex, menuId) {
   G.practiceSelections[groupIndex] = menuId;
   saveGame(G);
+  renderPractice(G);
+};
+
+// ==============================
+// 休憩切り替え
+// ==============================
+window.onToggleRest = function(playerId) {
+  // 既存セーブデータ対策: 未定義なら初期化
+  if (!G.restingPlayerIds) G.restingPlayerIds = [];
+  
+  const index = G.restingPlayerIds.indexOf(playerId);
+  if (index >= 0) {
+    G.restingPlayerIds.splice(index, 1);
+  } else {
+    G.restingPlayerIds.push(playerId);
+  }
+  // 保存はせずメモリ上のみ（週をまたがない一時状態）
   renderPractice(G);
 };
 

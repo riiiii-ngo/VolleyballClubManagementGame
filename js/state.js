@@ -35,7 +35,9 @@ function createDefaultState() {
     },
     matchLog: [],        // 試合ログ [{week, name, result, log, score}]
     weeklyLog: [],       // 今週の出来事
+    weeklyResults: [],   // 今週の成長結果詳細
     practiceSelections: {}, // グループ毎の選択練習メニューID {groupIndex: menuId}
+    restingPlayerIds: [],   // 個別に休憩させる選手のID
     gameOver: false,
     titleScreenDone: false,
   };
@@ -58,8 +60,11 @@ function saveGame(state) {
   } catch(e) {
     console.error('localStorage save failed:', e);
   }
-  // Supabase非同期書き込み（awaitしない）
-  saveToDB(state).catch(e => console.error('Supabase save failed:', e));
+  // Supabase非同期書き込み（Promiseを返すことで待機可能にする）
+  return saveToDB(state).catch(e => {
+    console.error('Supabase save failed:', e);
+    throw e;
+  });
 }
 
 /**
@@ -139,6 +144,16 @@ function addRepPoints(state, pts) {
   state.reputation = getReputation(state);
 }
 
+/**
+ * 状態オブジェクトに必要なフィールドが欠けている場合（旧セーブデータ等）に補填する
+ */
+function ensureStateFields(state) {
+  if (!state.restingPlayerIds) state.restingPlayerIds = [];
+  if (!state.weeklyResults) state.weeklyResults = [];
+  if (!state.practiceSelections) state.practiceSelections = {};
+  return state;
+}
+
 // ==============================
 // 練習グループ管理
 // ==============================
@@ -176,9 +191,10 @@ function getStarterList(state) {
     .filter(Boolean);
 }
 
-// スタメンが7名揃っているか
+// スタメンが最低6名（リベロ以外）揃っているか
 function isStarterComplete(state) {
-  return Object.values(state.starters).every(id => id !== null);
+  const requiredSlots = ['OH1', 'OH2', 'MB1', 'MB2', 'OP', 'Se'];
+  return requiredSlots.every(slot => state.starters[slot] !== null);
 }
 
 // ==============================
@@ -258,6 +274,16 @@ function advanceWeekEffects(state) {
       state.activeEfficiency = null;
     }
   }
+
+  // ケガ選手の回復カウントダウン
+  state.players.forEach(p => {
+    if (!p.isInjured) return;
+    p.injuryRemainingWeeks = Math.max(0, (p.injuryRemainingWeeks || 1) - 1);
+    if (p.injuryRemainingWeeks <= 0) {
+      p.isInjured = false;
+      p.injuryRemainingWeeks = 0;
+    }
+  });
 }
 
 // ==============================
@@ -270,6 +296,8 @@ function yearEnd(state) {
 
   // 学年進級
   state.players.forEach(p => p.grade++);
+
+  state.restingPlayerIds = []; // 卒業・進級時にリセット
 
   // スタメンから卒業生を除外
   const graduateIds = new Set(graduates.map(p => p.id));

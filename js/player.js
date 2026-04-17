@@ -49,6 +49,8 @@ function generatePlayer(id, grade, position, statBase, isAllRounder = false) {
     currentStamina: params.stamina,
     maxStamina: 100,
     potential: Math.floor(Math.random() * 3) + 1, // 1-3 (潜在能力)
+    isInjured: false,
+    injuryRemainingWeeks: 0,
   };
 }
 
@@ -137,9 +139,9 @@ function autoSetStarters(state) {
   const used = new Set();
 
   for (const [slot, pos] of Object.entries(slotPositions)) {
-    // そのポジションの選手をグレード降順・能力値降順でソート
+    // そのポジションの選手をグレード降順・能力値降順でソート（ケガ中は除外）
     const candidates = state.players
-      .filter(p => p.position === pos && !used.has(p.id))
+      .filter(p => p.position === pos && !used.has(p.id) && !p.isInjured)
       .sort((a, b) => {
         if (b.grade !== a.grade) return b.grade - a.grade;
         return totalStats(b) - totalStats(a);
