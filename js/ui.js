@@ -315,17 +315,19 @@ function renderHome(state) {
   }
 
   el.innerHTML = `
-    ${situationHtml}
-    ${staminaWarnHtml}
-    ${teamStaminaHtml}
-    ${groupQuickHtml}
-    <div class="btn-action-secondary-row">
-      <button class="btn-action-secondary" onclick="switchTabPublic('team')">👥 チーム設定</button>
-      <button class="btn-action-secondary" onclick="switchTabPublic('scout')">🔍 スカウト</button>
+    <div class="home-scroll-area">
+      ${situationHtml}
+      ${staminaWarnHtml}
+      ${teamStaminaHtml}
+      ${groupQuickHtml}
+      <div class="btn-action-secondary-row">
+        <button class="btn-action-secondary" onclick="switchTabPublic('team')">👥 チーム設定</button>
+        <button class="btn-action-secondary" onclick="switchTabPublic('scout')">🔍 スカウト</button>
+      </div>
+      ${tournamentHtml}
+      ${weekLogHtml}
+      ${historyHtml}
     </div>
-    ${tournamentHtml}
-    ${weekLogHtml}
-    ${historyHtml}
   `;
 
   // action-footer に進むボタン
@@ -529,8 +531,9 @@ function renderStarterSettings(state) {
 
   const starterComplete = isStarterComplete(state);
   let starterHtml = `
-    <div class="team-section-header">
-      <span class="team-section-label">スタメン設定</span>
+    <div class="sub-screen-header">
+      <button class="btn-back" id="btn-back-starters"><span>&lt; 戻る</span></button>
+      <div class="sub-screen-title">スタメン設定</div>
       <span style="font-size:0.75rem;color:${starterComplete ? 'var(--green)' : 'var(--red)'}">
         ${starterComplete ? '✓ 完了' : '⚠ 未完了'}
       </span>

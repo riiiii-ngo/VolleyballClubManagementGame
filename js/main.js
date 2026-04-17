@@ -126,6 +126,7 @@ function startMainGame() {
       <div id="tab-scout" class="tab-content"></div>
       <div id="tab-shop"  class="tab-content"></div>
     </main>
+    <div id="action-footer" class="action-footer" style="display:none"></div>
     <nav class="tab-nav">
       <button class="tab-btn active" data-tab="home">
         <span class="tab-icon">🏠</span><span class="tab-label">ホーム</span>

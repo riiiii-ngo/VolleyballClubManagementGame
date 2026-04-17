@@ -35,10 +35,22 @@ body {
   background: #000;
   color: var(--text);
   font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  height: 100vh;
+  height: 100%;
   overflow: hidden;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior: none;
+}
+
+/* アプリ全体コンテナ: 縦 flex で header/main/footer を積む */
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100dvh;          /* dvh = Dynamic Viewport Height (iOS/Android対応) */
+  overflow: hidden;
+  position: relative;
+}
+@supports not (height: 100dvh) {
+  #app { height: -webkit-fill-available; }
 }
 
 /* ==============================
@@ -51,10 +63,7 @@ body {
   color: var(--text-white);
   padding: 12px 16px 10px;
   padding-top: calc(12px + env(safe-area-inset-top, 0px));
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;           /* flexレイアウトで高さを固定 */
   z-index: 100;
   text-shadow: 0 1px 4px rgba(0,0,0,0.6);
 }
@@ -90,10 +99,7 @@ body {
    下部ナビゲーション (固定)
    ============================== */
 .tab-nav {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  flex-shrink: 0;           /* flexレイアウトで高さをコンテンツに合わせる */
   background: rgba(255,255,255,0.92);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
@@ -103,7 +109,6 @@ body {
   padding: 6px 0;
   padding-bottom: calc(6px + var(--safe-bottom));
   z-index: 100;
-  height: var(--nav-height);
 }
 .tab-btn {
   background: none;
@@ -158,12 +163,10 @@ body {
    メインコンテンツエリア
    ============================== */
 .app-main {
-  position: absolute;
-  inset: 0;
+  flex: 1;                  /* 残りの高さをすべて占有 */
+  min-height: 0;            /* flex スクロールに必須 */
+  position: relative;
   z-index: 20;
-  pointer-events: none;
-  padding-top: calc(var(--header-height) + 16px);
-  padding-bottom: calc(var(--nav-height) + 16px + var(--safe-bottom));
   overflow: hidden;
 }
 .tab-content {
@@ -172,11 +175,14 @@ body {
   height: 100%;
   max-width: 500px;
   margin: 0 auto;
-  pointer-events: auto;
   padding: 0 16px;
   position: relative;
+  overflow: hidden;
 }
-.tab-content.active { display: block; }
+.tab-content.active {
+  display: flex;
+  flex-direction: column;   /* 子要素を縦に積む */
+}
 
 /* パネルビュー（チーム、スカウトなどで使用） */
 .panel-view {
@@ -185,9 +191,20 @@ body {
   -webkit-backdrop-filter: blur(12px);
   border-radius: 20px;
   box-shadow: 0 8px 32px rgba(0,0,0,0.15);
-  height: 100%;
+  flex: 1;                  /* 残り高さを埋める */
+  min-height: 0;            /* flex スクロールに必須 */
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   padding: 16px;
+}
+
+/* ホーム/試合画面のスクロールエリア */
+.home-scroll-area {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 16px;
 }
 
 /* ホームのフローティング要素 */
@@ -999,9 +1016,10 @@ button {
 
 /* ── 全体コンテナ ── */
 .practice-screen {
+  flex: 1;                  /* tab-content の残り高さを埋める */
+  min-height: 0;
   display: flex;
   flex-direction: column;
-  height: 100%;
   gap: 0;
   overflow: hidden;
 }
@@ -1381,26 +1399,17 @@ button {
 }
 
 /* ==============================
-   常時固定アクションフッター
+   アクションフッター (flex 子要素 / fixed 不使用)
    ============================== */
 .action-footer {
-  position: fixed;
-  bottom: calc(var(--nav-height) + var(--safe-bottom));
-  left: 0;
-  right: 0;
+  flex-shrink: 0;           /* #app の flex 子要素として nav の直上に配置 */
+  width: 100%;
   padding: 8px 16px;
   background: rgba(242,242,247,0.94);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border);
   z-index: 90;
-  max-width: 640px;
-  margin: 0 auto;
-}
-
-/* コンテンツ下部にアクションフッター分のスペース確保 */
-.tab-content {
-  padding-bottom: calc(var(--nav-height) + 76px + var(--safe-bottom));
 }
 
 /* ==============================
@@ -1596,4 +1605,203 @@ button {
   0% { transform: scale(0) rotate(-10deg); opacity: 0; }
   100% { transform: scale(1) rotate(0deg); opacity: 1; }
 }
+
+/* ============================================================
+   ホーム画面 UI コンポーネント
+   ============================================================ */
+.situation-card {
+  background: rgba(255,255,255,0.9);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  margin-bottom: 10px;
+  box-shadow: var(--shadow);
+  border-left: 4px solid var(--border);
+}
+.situation-match   { border-left-color: var(--orange); }
+.situation-warn    { border-left-color: var(--red); background: rgba(255,240,240,0.9); }
+.situation-practice { border-left-color: var(--accent); }
+.situation-title { font-size: 0.72rem; color: var(--text2); font-weight: 700; margin-bottom: 4px; }
+.situation-main  { font-size: 1rem; font-weight: 800; margin-bottom: 2px; }
+.situation-sub   { font-size: 0.8rem; color: var(--text2); }
+
+.team-stamina-overview {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+.tso-label { font-size: 0.72rem; color: var(--text2); min-width: 28px; }
+.tso-bar-track { flex: 1; height: 8px; background: #E5E5EA; border-radius: 4px; overflow: hidden; }
+.tso-bar-fill  { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.tso-value     { font-size: 0.82rem; font-weight: 800; min-width: 32px; text-align: right; }
+
+.group-quick-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+}
+.group-quick-chip {
+  background: rgba(255,255,255,0.85);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  box-shadow: var(--shadow);
+}
+.gqc-name    { font-size: 0.65rem; color: var(--text2); font-weight: 800; margin-bottom: 2px; }
+.gqc-menu    { font-size: 0.78rem; font-weight: 700; }
+.gqc-menu.unset { color: var(--red); }
+.gqc-members { font-size: 0.65rem; color: var(--text2); margin-top: 2px; }
+
+.btn-action-secondary-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.btn-action-secondary {
+  background: rgba(255,255,255,0.85);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text);
+  box-shadow: var(--shadow);
+  -webkit-tap-highlight-color: transparent;
+}
+.btn-action-secondary:active { transform: scale(0.97); background: #F2F2F7; }
+
+/* ============================================================
+   チーム / スタメン設定 新 UI
+   ============================================================ */
+.starter-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+}
+.starter-slot-v2 {
+  background: var(--bg-card);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+}
+.ssv2-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  color: var(--accent);
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+.ssv2-select {
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 8px 6px;
+  font-size: 0.78rem;
+  font-family: inherit;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+/* ============================================================
+   試合結果モーダル 新 UI
+   ============================================================ */
+.match-result-header {
+  padding: 24px 20px 20px;
+  text-align: center;
+  color: #fff;
+}
+.win-header  { background: linear-gradient(135deg, #27AE60 0%, #34C759 100%); }
+.lose-header { background: linear-gradient(135deg, #C0392B 0%, #FF3B30 100%); }
+.mrhv-name    { font-size: 0.85rem; opacity: 0.9; margin-bottom: 6px; }
+.mrhv-verdict { font-size: 1.4rem; font-weight: 900; margin-bottom: 6px; }
+.mrhv-score   { font-size: 2.8rem; font-weight: 900; letter-spacing: 0.1em; line-height: 1; margin-bottom: 4px; }
+.mrhv-sets    { font-size: 0.82rem; opacity: 0.85; }
+
+.match-result-body { padding: 16px 20px 24px; }
+.match-rewards-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.reward-chip {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 8px 14px;
+  text-align: center;
+  min-width: 80px;
+}
+.reward-chip-label { font-size: 0.65rem; color: var(--text2); font-weight: 700; margin-bottom: 2px; }
+.reward-chip-value { font-size: 0.95rem; font-weight: 900; }
+.reward-chip-value.positive { color: var(--green); }
+.reward-chip-value.negative { color: var(--red); }
+
+.match-log-area-v2 {
+  background: var(--bg);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  max-height: 240px;
+  overflow-y: auto;
+  font-size: 0.75rem;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+.log-line-section   { color: var(--accent); font-weight: 700; padding: 4px 0; }
+.log-line-highlight { color: var(--orange); font-weight: 700; padding: 2px 0; }
+.log-line-result    { color: var(--text); font-weight: 800; padding: 4px 0; }
+.log-line-normal    { color: var(--text2); padding: 2px 0; }
+
+.btn-match-action {
+  background: linear-gradient(135deg, #FF6B2B 0%, #E63900 100%) !important;
+  animation: pulse-match 2s ease-in-out infinite;
+}
+
+/* ============================================================
+   選手詳細カード
+   ============================================================ */
+.pdc-header {
+  background: linear-gradient(135deg, #1B3A5C 0%, #2A5F8F 100%);
+  padding: 24px 20px 20px;
+  text-align: center;
+  color: #fff;
+}
+.pdc-name      { font-size: 1.3rem; font-weight: 900; margin-bottom: 4px; }
+.pdc-meta-line { font-size: 0.82rem; opacity: 0.85; margin-bottom: 12px; }
+.pdc-ovr       { font-size: 2.4rem; font-weight: 900; line-height: 1; }
+.pdc-ovr-label { font-size: 0.7rem; opacity: 0.7; margin-top: 2px; }
+.pdc-body      { padding: 16px 20px 24px; }
+.pdc-params-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  margin-bottom: 16px;
+}
+.pdc-param-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--bg);
+  border-radius: 8px;
+  padding: 8px 12px;
+}
+.pdc-param-name         { font-size: 0.75rem; color: var(--text2); font-weight: 600; }
+.pdc-param-val          { font-size: 0.88rem; font-weight: 800; }
+.pdc-param-val.high     { color: var(--red); }
+.pdc-param-val.low      { color: var(--text2); }
+
+.stamina-compact-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+.sci-name   { font-size: 0.8rem; font-weight: 700; min-width: 60px; }
+.sci-bar    { flex: 1; height: 8px; background: #E5E5EA; border-radius: 4px; overflow: hidden; }
+.sci-bar-fill { height: 100%; border-radius: 4px; transition: width 0.3s; }
+.sci-val    { font-size: 0.8rem; font-weight: 700; min-width: 28px; text-align: right; }
+.sci-status { font-size: 0.75rem; font-weight: 700; min-width: 44px; text-align: right; }
 
