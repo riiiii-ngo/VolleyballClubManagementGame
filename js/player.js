@@ -8,9 +8,22 @@ function randomName() {
   return `${last} ${first}`;
 }
 
-// パラメータをクランプ
+// パラメータをクランプ（初期生成用）
 function clamp(v, min=1, max=99) {
   return Math.max(min, Math.min(max, Math.round(v)));
+}
+
+// 次のレベルアップに必要な経験値
+function needExp(stat) {
+  return Math.floor(20 + stat * 3 + Math.pow(stat, 1.7));
+}
+
+// 高ステータス帯の成長効率
+function expMultiplier(stat) {
+  if (stat >= 120) return 0.1;
+  if (stat >= 110) return 0.2;
+  if (stat >= 100) return 0.4;
+  return 1.0;
 }
 
 // 選手生成
@@ -46,6 +59,7 @@ function generatePlayer(id, grade, position, statBase, isAllRounder = false) {
     position,
     isAllRounder,
     params,
+    exp: {},
     currentStamina: params.stamina,
     maxStamina: 100,
     potential: Math.floor(Math.random() * 3) + 1, // 1-3 (潜在能力)
@@ -139,9 +153,9 @@ function autoSetStarters(state) {
   const used = new Set();
 
   for (const [slot, pos] of Object.entries(slotPositions)) {
-    // そのポジションの選手をグレード降順・能力値降順でソート（ケガ中は除外）
+    // そのポジションの選手またはオールラウンダーをグレード降順・能力値降順でソート（ケガ中は除外）
     const candidates = state.players
-      .filter(p => p.position === pos && !used.has(p.id) && !p.isInjured)
+      .filter(p => (p.position === pos || p.isAllRounder) && !used.has(p.id) && !p.isInjured)
       .sort((a, b) => {
         if (b.grade !== a.grade) return b.grade - a.grade;
         return totalStats(b) - totalStats(a);
@@ -177,33 +191,31 @@ function playerOverall(player) {
 
 // パラメータ増加（練習）
 function applyParamGrowth(player, params, baseGrowth, efficiency) {
-  const isMini = false;
-  const staminaFactor = player.currentStamina < 10 ? 0.4 : 1.0;
+  if (!player.exp) player.exp = {};
+  const staminaFactor = player.currentStamina / player.maxStamina;
   const posGrowth = POSITION_GROWTH_PARAMS[player.position] || [];
-  const isAllRounder = player.isAllRounder;
+  const practiceParams = params.filter(k => k !== 'stamina');
+  const multiParamFactor = 1 / Math.sqrt(practiceParams.length);
 
-  params.forEach(key => {
-    if (key === 'stamina') return; // スタミナは別管理
+  practiceParams.forEach(key => {
+    if (!player.exp[key]) player.exp[key] = 0;
+    const currentStat = player.params[key] || 1;
 
-    // 現在のステータスに応じた基本成長量
-    const currentVal = player.params[key] || 1;
-    let statGrowth = 3;
-    if (currentVal >= 80) statGrowth = 0.5;
-    else if (currentVal >= 60) statGrowth = 1;
-    else if (currentVal >= 30) statGrowth = 2;
+    let expGain = baseGrowth * 500;
+    expGain *= multiParamFactor;
+    expGain *= staminaFactor;
+    expGain *= efficiency;
+    if (player.isAllRounder || posGrowth.includes(key)) expGain *= 1.3;
+    expGain *= (0.8 + Math.random() * 0.4);
+    expGain *= expMultiplier(currentStat);
+    expGain = Math.floor(expGain);
+    if (expGain <= 0) return;
 
-    // baseGrowth(Tier1=2)を基準にスケーリング
-    let growth = statGrowth * (baseGrowth / 2) * efficiency * staminaFactor;
-
-    // ポジション適性ボーナス
-    if (isAllRounder || posGrowth.includes(key)) {
-      growth *= 1.3;
+    player.exp[key] += expGain;
+    while (player.exp[key] >= needExp(player.params[key])) {
+      player.exp[key] -= needExp(player.params[key]);
+      player.params[key] += 1;
     }
-
-    // ランダム要素
-    growth *= (0.8 + Math.random() * 0.4);
-
-    player.params[key] = clamp(player.params[key] + growth);
   });
 }
 

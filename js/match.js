@@ -5,64 +5,61 @@
 // ==============================
 // 対戦相手チーム生成
 // ==============================
-function getEnemyTeamId(tournament, round) {
-  if (tournament === 'prefectural' || tournament === 'spring_prelim') {
-    if (round === 0) return 'weak_team';
-    if (round === 1) return 'normal_team';
-    return 'strong_team';
-  } else {
-    // interhigh, spring
-    if (round === 0) return 'normal_team';
-    if (round === 1) return 'strong_team';
-    return Math.random() < 0.5 ? 'elite_team' : 'pro_team';
-  }
+const MATCH_TYPE_RANKS = {
+  prefecture_1st:   ['弱小'],
+  prefecture_semi:  ['弱小', '普通'],
+  prefecture_final: ['普通', '強豪'],
+  interhigh_1st:    ['強豪'],
+  interhigh_semi:   ['強豪', '名門'],
+  interhigh_final:  ['名門', 'プロ養成校'],
+  haruko_1st:       ['強豪'],
+  haruko_semi:      ['強豪', '名門'],
+  haruko_final:     ['名門', 'プロ養成校'],
+};
+
+function toMatchType(tournament, round) {
+  const prefix =
+    (tournament === 'prefectural' || tournament === 'spring_prelim') ? 'prefecture' :
+    tournament === 'interhigh' ? 'interhigh' : 'haruko';
+  const suffix = ['1st', 'semi', 'final'][round] || '1st';
+  return `${prefix}_${suffix}`;
+}
+
+function getEnemyTeam(matchType) {
+  const ranks = MATCH_TYPE_RANKS[matchType];
+  if (!ranks) throw new Error(`Unknown matchType: ${matchType}`);
+  const candidates = ENEMIES.filter(t => ranks.includes(t.rank));
+  if (candidates.length === 0) throw new Error(`No teams found for matchType: ${matchType} (ranks: ${ranks.join(', ')})`);
+  return candidates[Math.floor(Math.random() * candidates.length)];
 }
 
 function generateOpponent(tournament, round, year, reputation) {
-  const enemyId = getEnemyTeamId(tournament, round);
-  const teamDef = ENEMIES.find(e => e.id === enemyId) || ENEMIES[0];
-  const stats = teamDef.stats;
+  const matchType = toMatchType(tournament, round);
+  const team = getEnemyTeam(matchType);
 
-  const getStat = (key) => {
-    switch (key) {
-      case 'spike': return stats.attack;
-      case 'power': return stats.attack;
-      case 'block': return stats.defense;
-      case 'receive': return stats.receive;
-      case 'serve': return stats.serve;
-      case 'toss': return (stats.attack + stats.receive) / 2;
-      case 'speed': return (stats.attack + stats.defense) / 2;
-      case 'technique': return (stats.attack + stats.serve) / 2;
-      default: return 50;
-    }
-  };
-
-  const oPositions = ['OH','OH','MB','MB','OP','Se','Li'];
-  const players = oPositions.map((pos, i) => {
-    const noise = () => Math.floor(Math.random() * 10) - 5;
-    const params = {};
-    PARAM_KEYS.forEach(k => {
-      if (k === 'stamina') { params[k] = 90; return; }
-      params[k] = clamp(getStat(k) + noise());
-    });
-    // ポジション補正
-    const growth = POSITION_GROWTH_PARAMS[pos] || [];
-    growth.forEach(k => { if (k !== 'stamina') params[k] = clamp(params[k] + 8); });
-
-    return {
-      id: -(i + 1),
-      name: `相手選手${i + 1}`,
-      position: pos,
-      params,
-      currentStamina: 90,
-      maxStamina: 100,
-      isAllRounder: false,
-      grade: 2,
-    };
-  });
+  const players = team.players.map((p, i) => ({
+    id: -(i + 1),
+    name: p.name,
+    position: p.position,
+    params: {
+      spike: p.spike,
+      receive: p.receive,
+      block: p.block,
+      serve: p.serve,
+      toss: p.toss,
+      power: p.power,
+      speed: p.speed,
+      technique: p.technique,
+      stamina: p.stamina,
+    },
+    currentStamina: 90,
+    maxStamina: 100,
+    isAllRounder: false,
+    grade: 2,
+  }));
 
   const teamAvg = players.reduce((s, p) => s + playerOverall(p), 0) / players.length;
-  return { players, name: teamDef.name, avgStat: Math.round(teamAvg) };
+  return { players, name: team.school, avgStat: Math.round(teamAvg) };
 }
 
 // ==============================

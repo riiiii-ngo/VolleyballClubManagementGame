@@ -318,7 +318,11 @@ function doYearEnd() {
   }
 
   ensurePracticeGroups(G);
-  autoAssignPracticeGroups(G);
+  // 新入生のみグループAに追加（既存選手のグループ設定は維持）
+  newPlayers.forEach(p => {
+    if (!G.practiceGroups[0]) G.practiceGroups[0] = [];
+    G.practiceGroups[0].push(p.id);
+  });
   autoSetStarters(G);
 
   saveGame(G);

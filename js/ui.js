@@ -476,20 +476,19 @@ function renderPlayerList(state) {
       const isStarter = Object.values(state.starters).includes(p.id);
       const pGroup = playerGroups[p.id] !== undefined ? playerGroups[p.id] : -1;
       
-      const selectHtml = `<select class="player-group-select" data-pid="${p.id}">
-        <option value="-1" ${pGroup===-1?'selected':''}>-</option>
-        ${Array.from({length:groupCount}).map((_,gi)=>`<option value="${gi}" ${pGroup===gi?'selected':''}>${['A','B','C','D'][gi]}</option>`).join('')}
-      </select>`;
+      const grpLabel = pGroup === -1 ? '-' : ['A','B','C','D'][pGroup];
+      const grpColor = pGroup === -1 ? '#888' : ['#007AFF','#34C759','#FF9500','#AF52DE'][pGroup];
+      const selectHtml = `<span class="group-cycle-btn" data-pid="${p.id}" data-group="${pGroup}" data-groupcount="${groupCount}" style="display:inline-block;min-width:24px;padding:2px 7px;border-radius:5px;background:${grpColor};color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;text-align:center;">${grpLabel}</span>`;
 
       const injuryBadge = p.isInjured
         ? ` <span style="background:#FF3B30;color:#fff;font-size:0.6rem;font-weight:800;padding:1px 5px;border-radius:4px;">🩼ケガ中(あと${p.injuryRemainingWeeks}週)</span>`
         : '';
 
       rosterHtml += `<tr class="${isStarter ? 'starter-row' : ''}" style="${p.isInjured ? 'opacity:0.45;background:#f9f9f9;' : ''}">
-        <td>${p.name}${p.isAllRounder ? ' <span class="badge-ar">全</span>' : ''}${isStarter ? ' <span class="badge-st">先</span>' : ''}${injuryBadge}</td>
+        <td>${p.name}${isStarter ? ' <span class="badge-st">先</span>' : ''}${injuryBadge}</td>
         <td>${selectHtml}</td>
         <td>${p.grade}年</td>
-        <td>${p.position}</td>
+        <td>${p.isAllRounder ? '<span class="badge-ar">全</span>' : p.position}</td>
         <td><strong>${playerOverall(p)}</strong></td>
         <td>${renderStatList(p.params.spike)}</td>
         <td>${renderStatList(p.params.receive)}</td>
@@ -509,11 +508,13 @@ function renderPlayerList(state) {
   document.getElementById('btn-back-roster').addEventListener('click', () => { teamScreenMode = 'menu'; renderTeam(state); });
   document.getElementById('btn-auto-group').addEventListener('click', () => window.onAutoGroup());
   
-  container.querySelectorAll('.player-group-select').forEach(sel => {
-    sel.addEventListener('change', () => {
-      const pid = parseInt(sel.dataset.pid);
-      const gi = parseInt(sel.value);
-      window.onGroupChange(gi, pid, gi !== -1);
+  container.querySelectorAll('.group-cycle-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pid = parseInt(btn.dataset.pid);
+      const current = parseInt(btn.dataset.group);
+      const gc = parseInt(btn.dataset.groupcount);
+      const next = current === -1 ? 0 : (current + 1) % gc;
+      window.onGroupChange(next, pid, true);
     });
   });
 }
@@ -553,8 +554,9 @@ function renderStarterSettings(state) {
             .sort((a, b) => b.grade - a.grade || playerOverall(b) - playerOverall(a))
             .map(p => {
               const injLabel = p.isInjured ? ` 🩼ケガ中(あと${p.injuryRemainingWeeks}週)` : '';
+              const arBadge = p.isAllRounder ? '[全] ' : '';
               return `<option value="${p.id}" ${pid === p.id ? 'selected' : ''} ${p.isInjured ? 'disabled' : ''}>
-              ${p.name}${injLabel} (${p.grade}年 OVR:${playerOverall(p)})
+              ${arBadge}${p.name}${injLabel} (${p.grade}年 OVR:${playerOverall(p)})
             </option>`;
             }).join('')}
         </select>
@@ -593,8 +595,8 @@ function showPlayerDetail(player) {
   modal.innerHTML = `
     <div class="modal-content" style="padding:0;overflow:hidden">
       <div class="pdc-header">
-        <div class="pdc-name">${player.name}${player.isAllRounder ? ' <span class="badge-ar">全ラ</span>' : ''}</div>
-        <div class="pdc-meta-line">${player.grade}年生 / ${POSITION_NAMES[player.position]}(${player.position})</div>
+        <div class="pdc-name">${player.name}${player.isAllRounder ? ' <span class="badge-ar">全</span>' : ''}</div>
+        <div class="pdc-meta-line">${player.grade}年生 / ${player.isAllRounder ? '全ポジション対応' : POSITION_NAMES[player.position]}(${player.position})</div>
         <div class="pdc-ovr">${ovr}</div>
         <div class="pdc-ovr-label">Overall</div>
       </div>
@@ -634,13 +636,13 @@ const PRACTICE_MENU_ICONS = {
 function getRank(value) {
   if (value >= 120) return { label: "SSS", color: "transparent", bg: "linear-gradient(135deg, #FFD700, #FF8C00)" };
   if (value >= 110) return { label: "SS", color: "#D4AF37" };
-  if (value >= 75)  return { label: "S", color: "#FF3B30" };
-  if (value >= 65)  return { label: "A", color: "#FF9500" };
-  if (value >= 55)  return { label: "B", color: "#34C759" };
-  if (value >= 45)  return { label: "C", color: "#8E8E93" };
-  if (value >= 35)  return { label: "D", color: "#9E9E9E" };
+  if (value >= 100) return { label: "S", color: "#FF3B30" };
+  if (value >= 85)  return { label: "A", color: "#FF9500" };
+  if (value >= 70)  return { label: "B", color: "#34C759" };
+  if (value >= 55)  return { label: "C", color: "#8E8E93" };
+  if (value >= 40)  return { label: "D", color: "#9E9E9E" };
   if (value >= 25)  return { label: "E", color: "#BDBDBD" };
-  if (value >= 15)  return { label: "F", color: "#D3D3D3" };
+  if (value >= 10)  return { label: "F", color: "#D3D3D3" };
   return { label: "G", color: "#E0E0E0" };
 }
 
@@ -709,7 +711,7 @@ function renderPractice(state) {
           <div>
             <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 4px;">
               <span style="font-size: 0.65rem; color: #999; font-weight: 800; background: #e5e5ea; padding: 2px 6px; border-radius: 6px; white-space: nowrap;">${p.grade}年</span>
-              <span style="font-size: 0.7rem; color: #999; font-weight: 800; white-space: nowrap;">${p.position}</span>
+              <span style="font-size: 0.7rem; color: #999; font-weight: 800; white-space: nowrap;">${p.isAllRounder ? '全' : p.position}</span>
             </div>
             <div style="font-size: 1.05rem; font-weight: 900; color: #8e8e93; margin-bottom: 4px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
               ${p.name}
@@ -759,7 +761,7 @@ function renderPractice(state) {
         <div>
           <div style="display: flex; gap: 4px; align-items: center; margin-bottom: 4px;">
             <span style="font-size: 0.65rem; color: #666; font-weight: 800; background: #F2F2F7; padding: 2px 6px; border-radius: 6px; white-space: nowrap;">${p.grade}年</span>
-            <span style="font-size: 0.7rem; color: #666; font-weight: 800; white-space: nowrap;">${p.position}</span>
+            <span style="font-size: 0.7rem; color: #666; font-weight: 800; white-space: nowrap;">${p.isAllRounder ? '全' : p.position}</span>
           </div>
           <div style="font-size: 1.05rem; font-weight: 900; color: #1c1c1e; margin-bottom: 6px; line-height: 1.25; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
             ${p.name}

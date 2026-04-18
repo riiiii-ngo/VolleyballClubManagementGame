@@ -8,7 +8,12 @@
       "Bash(node --check js/config.js)",
       "Bash(node --check js/state.js)",
       "Bash(node --check js/player.js)",
-      "Bash(node --check js/practice.js)"
+      "Bash(node --check js/practice.js)",
+      "Bash(python -c ' *)",
+      "Bash(pip install *)",
+      "Bash(python)",
+      "Bash(python -c \" import openpyxl, json, sys sys.stdout.reconfigure\\(encoding='utf-8'\\) wb = openpyxl.load_workbook\\('docs/敵チーム情報.xlsx'\\) ws = wb['Sheet1'] rows = list\\(ws.iter_rows\\(values_only=True\\)\\) teams = [] current_rank = None current_school = None current_players = [] header_seen = False rank_map = {'弱小':'弱小','普通':'普通','強豪':'強豪','名門':'名門','プロ養成校':'プロ養成校'} pos_map = {'OH':'OH','MB':'MB','OP':'OP','Se':'S','Li':'L'} for row in rows: a = row[0] b = row[1] if len\\(row\\) > 1 else None if a is None: continue s = str\\(a\\).strip\\(\\) if s in rank_map: current_rank = rank_map[s] header_seen = False continue if s == '学校名': if current_school and current_players: teams.append\\({'school': current_school, 'rank': current_rank, 'players': current_players}\\) current_school = str\\(b\\).strip\\(\\) if b else '' current_players = [] header_seen = False continue if s == '名前': header_seen = True continue if header_seen and b is not None and row[2] is not None and isinstance\\(row[2], \\(int, float\\)\\): pos_raw = str\\(b\\).strip\\(\\) player = { 'name': s, 'position': pos_map.get\\(pos_raw, pos_raw\\), 'spike': int\\(round\\(float\\(row[3]\\)\\)\\) if row[3] else 0, 'receive': int\\(round\\(float\\(row[4]\\)\\)\\) if row[4] else 0, 'block': int\\(round\\(float\\(row[5]\\)\\)\\) if row[5] else 0, 'serve': int\\(round\\(float\\(row[6]\\)\\)\\) if row[6] else 0, 'toss': int\\(round\\(float\\(row[7]\\)\\)\\) if row[7] else 0, 'power': int\\(round\\(float\\(row[8]\\)\\)\\) if row[8] else 0, 'speed': int\\(round\\(float\\(row[9]\\)\\)\\) if row[9] else 0, 'technique': int\\(round\\(float\\(row[10]\\)\\)\\) if row[10] else 0, 'stamina': int\\(round\\(float\\(row[11]\\)\\)\\) if row[11] else 0, } current_players.append\\(player\\) if current_school and current_players: teams.append\\({'school': current_school, 'rank': current_rank, 'players': current_players}\\) print\\(json.dumps\\({'teams': teams}, ensure_ascii=False, indent=2\\)\\) \")",
+      "Read(//tmp/**)"
     ]
   }
 }
