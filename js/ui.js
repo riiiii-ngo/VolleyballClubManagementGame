@@ -939,10 +939,10 @@ function renderScout(state) {
   }
   html += '</div>';
 
-  // スカウト済み選手表示 (grade=1の選手 = 今年スカウトした選手)
-  const scouted = state.players.filter(p => p.grade === 1 && p._scouted);
+  // スカウト済み選手表示（来年度入部予定）
+  const scouted = state.pendingScouts || [];
   if (scouted.length > 0) {
-    html += '<div class="section-title">スカウト済み選手</div><div class="scout-list">';
+    html += '<div class="section-title">来年度入部予定</div><div class="scout-list">';
     scouted.forEach(p => {
       html += `<div class="scout-card">
         <div class="sc-name">${p.name} ${p.isAllRounder ? '<span class="badge-ar">オールラウンダー</span>' : ''}</div>
@@ -1059,6 +1059,275 @@ function renderShop(state) {
   // 使用イベント
   el.querySelectorAll('.btn-use').forEach(btn => {
     btn.addEventListener('click', () => window.onUseItem(parseInt(btn.dataset.invIdx)));
+  });
+}
+
+// ==============================
+// 試合前画面
+// ==============================
+function showPreMatchScreen(state, matchInfo) {
+  const opponent = generateOpponent(
+    matchInfo.tournament, matchInfo.round, state.year, state.reputation
+  );
+
+  const VOLLEYBALL_STATS = ['spike', 'serve', 'block', 'receive', 'toss'];
+
+  // 自チームスターター平均（5項目）
+  const starters = getStarters(state);
+  const starterList = Object.values(starters).filter(Boolean);
+  const ownAvg = {};
+  VOLLEYBALL_STATS.forEach(k => {
+    ownAvg[k] = starterList.length > 0
+      ? Math.round(starterList.reduce((s, p) => s + (p.params[k] || 0), 0) / starterList.length)
+      : 0;
+  });
+  const ownOverall = Math.round(VOLLEYBALL_STATS.reduce((s, k) => s + ownAvg[k], 0) / 5);
+
+  // 相手チーム平均
+  const oppAvg = {};
+  VOLLEYBALL_STATS.forEach(k => {
+    oppAvg[k] = Math.round(opponent.players.reduce((s, p) => s + (p.params[k] || 0), 0) / opponent.players.length);
+  });
+  const oppOverall = Math.round(VOLLEYBALL_STATS.reduce((s, k) => s + oppAvg[k], 0) / 5);
+
+  // 相手評判
+  const oppRepIdx = opponent.avgStat >= 75 ? 4
+    : opponent.avgStat >= 60 ? 3
+    : opponent.avgStat >= 50 ? 2
+    : opponent.avgStat >= 35 ? 1 : 0;
+
+  const dateStr = getDateString(state.week);
+  const ownRepLabel = REPUTATIONS[state.reputation];
+  const ownRepColor = REPUTATION_COLORS[state.reputation];
+  const oppRepLabel = REPUTATIONS[oppRepIdx];
+  const oppRepColor = REPUTATION_COLORS[oppRepIdx];
+
+  const statRows = (avg) => VOLLEYBALL_STATS.map(k => `
+    <div class="prematch-stat-row">
+      <span class="prematch-stat-name">${PARAM_NAMES[k]}</span>
+      <span class="prematch-stat-val">${renderRank(avg[k])}</span>
+    </div>`).join('');
+
+  setActionFooter('');
+  const el = document.getElementById('tab-home');
+  el.innerHTML = `
+    <div class="prematch-screen">
+      <div class="prematch-info-bar">
+        <span class="prematch-info-text">${dateStr}　${matchInfo.name}</span>
+        <button class="prematch-settings-btn" id="btn-prematch-settings">⚙️</button>
+      </div>
+
+      <div class="prematch-score-area">
+        <div class="prematch-score-row">
+          <span class="prematch-score-label"></span>
+          ${[1,2,3,4,5].map(n => `<span class="prematch-set-num">${n}</span>`).join('')}
+        </div>
+        <div class="prematch-score-row">
+          <span class="prematch-score-label">自チーム</span>
+          ${[1,2,3,4,5].map(() => `<span class="prematch-score-val">-</span>`).join('')}
+        </div>
+        <div class="prematch-score-row">
+          <span class="prematch-score-label">相手</span>
+          ${[1,2,3,4,5].map(() => `<span class="prematch-score-val">-</span>`).join('')}
+        </div>
+      </div>
+
+      <div class="prematch-card">
+        <div class="prematch-card-title">${matchInfo.name}</div>
+        <div class="prematch-teams">
+          <div class="prematch-team prematch-team-home">
+            <div class="prematch-serve-badge home">先攻</div>
+            <div class="prematch-team-name">バレー部</div>
+            <div class="prematch-team-rep" style="color:${ownRepColor}">${ownRepLabel}</div>
+            <div class="prematch-radar-wrap">
+              <canvas id="prematch-radar-a"></canvas>
+            </div>
+            <div class="prematch-stats">${statRows(ownAvg)}</div>
+            <div class="prematch-overall">総合 ${ownOverall} ${renderRank(ownOverall)}</div>
+          </div>
+
+          <div class="prematch-vs">VS</div>
+
+          <div class="prematch-team prematch-team-away">
+            <div class="prematch-serve-badge away">後攻</div>
+            <div class="prematch-team-name">${opponent.name}</div>
+            <div class="prematch-team-rep" style="color:${oppRepColor}">${oppRepLabel}</div>
+            <div class="prematch-radar-wrap">
+              <canvas id="prematch-radar-b"></canvas>
+            </div>
+            <div class="prematch-stats">${statRows(oppAvg)}</div>
+            <div class="prematch-overall">総合 ${oppOverall} ${renderRank(oppOverall)}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="prematch-actions">
+        <button class="prematch-btn" id="btn-opponent-data">相手データ</button>
+        <button class="prematch-btn" id="btn-order">オーダー</button>
+        <button class="prematch-btn prematch-btn-start" id="btn-start-match">試合開始 ▶</button>
+      </div>
+    </div>
+  `;
+
+  // レーダーチャート描画（DOM確定後）
+  setTimeout(() => {
+    const chartOpts = (color) => ({
+      type: 'radar',
+      data: {
+        labels: ['スパイク', 'サーブ', 'ブロック', 'レシーブ', 'トス'],
+        datasets: [{
+          data: [0, 0, 0, 0, 0],
+          backgroundColor: `rgba(${color}, 0.2)`,
+          borderColor: `rgba(${color}, 1)`,
+          pointBackgroundColor: `rgba(${color}, 1)`,
+          pointBorderColor: '#fff',
+          pointHoverBackgroundColor: '#fff',
+          pointHoverBorderColor: `rgba(${color}, 1)`
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: true,
+        scales: {
+          r: {
+            angleLines: { color: 'rgba(0,0,0,0.1)' },
+            grid: { color: 'rgba(0,0,0,0.1)' },
+            pointLabels: {
+              font: { family: "'Noto Sans JP', sans-serif", size: 10, weight: 'bold' },
+              color: '#1C1C1E'
+            },
+            min: 0, max: 100,
+            ticks: { display: false, stepSize: 20 }
+          }
+        },
+        plugins: { legend: { display: false } }
+      }
+    });
+
+    const ctxA = document.getElementById('prematch-radar-a');
+    if (ctxA && window.Chart) {
+      const cfg = chartOpts('0, 122, 255');
+      cfg.data.datasets[0].data = VOLLEYBALL_STATS.map(k => ownAvg[k]);
+      new Chart(ctxA, cfg);
+    }
+    const ctxB = document.getElementById('prematch-radar-b');
+    if (ctxB && window.Chart) {
+      const cfg = chartOpts('255, 59, 48');
+      cfg.data.datasets[0].data = VOLLEYBALL_STATS.map(k => oppAvg[k]);
+      new Chart(ctxB, cfg);
+    }
+  }, 0);
+
+  // ボタンハンドラ
+  document.getElementById('btn-start-match').addEventListener('click', () => {
+    window.onStartMatch(opponent);
+  });
+
+  document.getElementById('btn-opponent-data').addEventListener('click', () => {
+    showOpponentDataModal(opponent, state, matchInfo);
+  });
+
+  document.getElementById('btn-order').addEventListener('click', () => {
+    showOrderModal(state, matchInfo);
+  });
+
+  document.getElementById('btn-prematch-settings').addEventListener('click', () => {
+    showAlert(`試合形式: 最大${matchInfo.maxSets}セット`);
+  });
+}
+
+function showOpponentDataModal(opponent, state, matchInfo) {
+  const modal = document.getElementById('modal');
+  const VOLLEYBALL_STATS = ['spike', 'serve', 'block', 'receive', 'toss'];
+  const rows = opponent.players.map(p => `
+    <div class="opponent-player-row">
+      <span class="opp-pos">${p.position}</span>
+      <span class="opp-name">${p.name}</span>
+      ${VOLLEYBALL_STATS.map(k => `<span class="opp-stat">${renderRank(p.params[k])}</span>`).join('')}
+    </div>
+  `).join('');
+
+  modal.innerHTML = `
+    <div class="prematch-inner-modal">
+      <div class="prematch-inner-header">
+        <span>${opponent.name} 選手データ</span>
+        <button class="prematch-inner-close" id="btn-opp-back">← 戻る</button>
+      </div>
+      <div class="opponent-players-header">
+        <span class="opp-pos">POS</span>
+        <span class="opp-name">名前</span>
+        ${VOLLEYBALL_STATS.map(k => `<span class="opp-stat">${PARAM_NAMES[k]}</span>`).join('')}
+      </div>
+      <div class="opponent-players-list">${rows}</div>
+    </div>
+  `;
+  document.getElementById('btn-opp-back').addEventListener('click', () => {
+    modal.style.display = 'none';
+    modal.innerHTML = '';
+    showPreMatchScreen(state, matchInfo);
+  });
+}
+
+function showOrderModal(state, matchInfo) {
+  const modal = document.getElementById('modal');
+  const SLOTS = ['OH1','OH2','MB1','MB2','OP','Se','Li'];
+  const SLOT_LABELS = { OH1:'OH①', OH2:'OH②', MB1:'MB①', MB2:'MB②', OP:'OP', Se:'Se', Li:'Li' };
+  const SLOT_POSITIONS = { OH1:'OH', OH2:'OH', MB1:'MB', MB2:'MB', OP:'OP', Se:'Se', Li:'Li' };
+
+  const eligible = (slot) => state.players.filter(p =>
+    !p.isInjured && p.position === SLOT_POSITIONS[slot]
+  );
+
+  const selects = SLOTS.map(slot => {
+    const opts = eligible(slot).map(p =>
+      `<option value="${p.id}" ${state.starters[slot] === p.id ? 'selected' : ''}>
+        ${p.name} (${Math.round(p.params.spike+p.params.receive+p.params.block+p.params.serve+p.params.toss)/5 | 0})
+      </option>`
+    ).join('');
+    return `
+      <div class="order-slot-row">
+        <span class="order-slot-label">${SLOT_LABELS[slot]}</span>
+        <select class="order-slot-select" data-slot="${slot}">
+          <option value="">未設定</option>${opts}
+        </select>
+      </div>`;
+  }).join('');
+
+  modal.innerHTML = `
+    <div class="prematch-inner-modal">
+      <div class="prematch-inner-header">
+        <span>スタメン設定</span>
+        <button class="prematch-inner-close" id="btn-order-back">← 戻る</button>
+      </div>
+      <div class="order-slots">${selects}</div>
+      <div class="order-actions">
+        <button class="prematch-btn prematch-btn-start" id="btn-order-confirm">確定</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btn-order-back').addEventListener('click', () => {
+    modal.style.display = 'none';
+    modal.innerHTML = '';
+    showPreMatchScreen(state, matchInfo);
+  });
+
+  document.getElementById('btn-order-confirm').addEventListener('click', () => {
+    document.querySelectorAll('.order-slot-select').forEach(sel => {
+      const slot = sel.dataset.slot;
+      const val = sel.value ? parseInt(sel.value) : null;
+      if (val) {
+        for (const [s, id] of Object.entries(state.starters)) {
+          if (s !== slot && id === val) state.starters[s] = null;
+        }
+      }
+      state.starters[slot] = val;
+    });
+    saveGame(state);
+    setStateRef(state);
+    modal.style.display = 'none';
+    modal.innerHTML = '';
+    showPreMatchScreen(state, matchInfo);
   });
 }
 

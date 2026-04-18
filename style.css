@@ -1832,3 +1832,279 @@ button {
 .sci-val    { font-size: 0.8rem; font-weight: 700; min-width: 28px; text-align: right; }
 .sci-status { font-size: 0.75rem; font-weight: 700; min-width: 44px; text-align: right; }
 
+/* ==============================
+   試合前画面
+   ============================== */
+.prematch-screen {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #F2F2F7;
+  min-height: 100%;
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+
+/* ① 試合情報バー */
+.prematch-info-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1C1C1E;
+  color: #fff;
+  padding: 10px 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.prematch-info-text { flex: 1; }
+.prematch-settings-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+/* ② セットスコア */
+.prematch-score-area {
+  background: #fff;
+  padding: 10px 12px;
+  margin: 8px 12px 0;
+  border-radius: 12px;
+}
+.prematch-score-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 4px;
+}
+.prematch-score-row:last-child { margin-bottom: 0; }
+.prematch-score-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8E8E93;
+  min-width: 48px;
+}
+.prematch-set-num {
+  flex: 1;
+  text-align: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #8E8E93;
+  background: #F2F2F7;
+  border-radius: 6px;
+  padding: 3px 2px;
+}
+.prematch-score-val {
+  flex: 1;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #3C3C43;
+  padding: 3px 2px;
+}
+
+/* ③ 対戦カード */
+.prematch-card {
+  background: #fff;
+  margin: 8px 12px 0;
+  border-radius: 12px;
+  padding: 12px;
+}
+.prematch-card-title {
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #3C3C43;
+  margin-bottom: 10px;
+}
+.prematch-teams {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+.prematch-vs {
+  font-size: 0.85rem;
+  font-weight: 900;
+  color: #8E8E93;
+  align-self: center;
+  flex-shrink: 0;
+  padding: 0 2px;
+}
+.prematch-team {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: #F9F9FB;
+  border-radius: 10px;
+  padding: 8px 6px;
+  border: 2px solid transparent;
+}
+.prematch-team-home { border-color: rgba(0,122,255,0.3); }
+.prematch-team-away { border-color: rgba(255,59,48,0.3); }
+
+.prematch-serve-badge {
+  font-size: 0.65rem;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 10px;
+  margin-bottom: 4px;
+}
+.prematch-serve-badge.home { background: rgba(0,122,255,0.15); color: #007AFF; }
+.prematch-serve-badge.away { background: rgba(255,59,48,0.15); color: #FF3B30; }
+
+.prematch-team-name {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #1C1C1E;
+  text-align: center;
+  margin-bottom: 2px;
+}
+.prematch-team-rep {
+  font-size: 0.7rem;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.prematch-radar-wrap {
+  width: 120px;
+  height: 120px;
+  margin-bottom: 8px;
+}
+.prematch-radar-wrap canvas {
+  width: 120px !important;
+  height: 120px !important;
+}
+
+.prematch-stats {
+  width: 100%;
+}
+.prematch-stat-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.72rem;
+  padding: 2px 0;
+  border-bottom: 1px solid #F2F2F7;
+}
+.prematch-stat-row:last-child { border-bottom: none; }
+.prematch-stat-name { color: #8E8E93; font-weight: 600; }
+.prematch-stat-val { font-weight: 700; }
+
+.prematch-overall {
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: #1C1C1E;
+  margin-top: 6px;
+  text-align: center;
+}
+
+/* ④ アクションボタン */
+.prematch-actions {
+  display: flex;
+  gap: 8px;
+  padding: 12px;
+  margin-top: 8px;
+}
+.prematch-btn {
+  flex: 1;
+  padding: 12px 4px;
+  border: none;
+  border-radius: 10px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: #E5E5EA;
+  color: #1C1C1E;
+  font-family: inherit;
+}
+.prematch-btn-start {
+  flex: 1.4;
+  background: #007AFF;
+  color: #fff;
+}
+.prematch-btn:active { opacity: 0.75; }
+
+/* 相手データ・オーダー内部モーダル */
+.prematch-inner-modal {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 480px;
+  margin: 0 auto;
+  background: #F2F2F7;
+  min-height: 100%;
+  padding-bottom: env(safe-area-inset-bottom, 16px);
+}
+.prematch-inner-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #1C1C1E;
+  color: #fff;
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+.prematch-inner-close {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+/* 相手選手一覧 */
+.opponent-players-header,
+.opponent-player-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 0.72rem;
+}
+.opponent-players-header {
+  background: #E5E5EA;
+  font-weight: 700;
+  color: #8E8E93;
+}
+.opponent-player-row { background: #fff; border-bottom: 1px solid #F2F2F7; }
+.opp-pos { min-width: 28px; font-weight: 700; color: #007AFF; }
+.opp-name { flex: 1; font-weight: 600; color: #1C1C1E; }
+.opp-stat { min-width: 34px; text-align: center; font-weight: 700; }
+.opponent-players-list { overflow-y: auto; }
+
+/* オーダー設定 */
+.order-slots { padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.order-slot-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+.order-slot-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #007AFF;
+  min-width: 36px;
+}
+.order-slot-select {
+  flex: 1;
+  font-size: 0.82rem;
+  border: 1px solid #E5E5EA;
+  border-radius: 8px;
+  padding: 6px 8px;
+  background: #F9F9FB;
+  font-family: inherit;
+  color: #1C1C1E;
+}
+.order-actions { padding: 0 12px 12px; }
+

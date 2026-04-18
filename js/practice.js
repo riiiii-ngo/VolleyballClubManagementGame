@@ -51,8 +51,14 @@ function executePractice(state) {
       // ── ケガ中の選手は完全スキップ ──
       if (player.isInjured) return;
 
-      // ── 体力0での練習：ケガ判定 ──
-      if (player.currentStamina <= 0) {
+      // 成長前の値を記録
+      const before = { ...player.params };
+
+      // ── 休憩判定 ──
+      const isResting = state.restingPlayerIds && state.restingPlayerIds.includes(player.id);
+
+      // ── 体力0での練習：ケガ判定（休憩中は除外）──
+      if (!isResting && player.currentStamina <= 0) {
         if (Math.random() < 0.30) {
           const weeks = Math.floor(Math.random() * 6) + 3;
           player.isInjured = true;
@@ -66,12 +72,6 @@ function executePractice(state) {
           return;
         }
       }
-
-      // 成長前の値を記録
-      const before = { ...player.params };
-
-      // ── 休憩判定 ──
-      const isResting = state.restingPlayerIds && state.restingPlayerIds.includes(player.id);
       
       if (isResting) {
         // 休憩中：成長なし、スタミナ回復(+20)

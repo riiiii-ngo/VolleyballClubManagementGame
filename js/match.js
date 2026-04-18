@@ -286,7 +286,7 @@ function simulateSet(rotA, rotB, liberoA, liberoB, targetScore, isFinalSet) {
 // ==============================
 // 試合シミュレーション
 // ==============================
-function simulateMatch(state, matchInfo) {
+function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
   const starters = getStarters(state);
   const libero = starters.Li;
   const rotationSlots = ['OH1','MB1','OP','OH2','MB2','Se'];
@@ -300,7 +300,7 @@ function simulateMatch(state, matchInfo) {
     };
   }
 
-  const opponent = generateOpponent(
+  const opponent = preGeneratedOpponent || generateOpponent(
     matchInfo.tournament,
     matchInfo.round,
     state.year,

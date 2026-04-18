@@ -165,6 +165,18 @@ function switchTabPublic(tabId) {
   switchTab(tabId);
 }
 
+function preserveScroll(selector, fn) {
+  const el = document.querySelector(selector);
+  const scrollTop = el ? el.scrollTop : 0;
+  fn();
+  if (scrollTop > 0) {
+    requestAnimationFrame(() => {
+      const newEl = document.querySelector(selector);
+      if (newEl) newEl.scrollTop = scrollTop;
+    });
+  }
+}
+
 function renderAll() {
   updateStatusBar(G);
   renderTab('home');
@@ -185,9 +197,9 @@ function renderTab(tabId) {
         if (matchInfo.tournament === 'spring' && !G.tournaments.spring_prelim.champion) qualified = false;
       }
       if (isMatchWeek && qualified) {
-        renderHome(G); // 試合画面を表示
+        showPreMatchScreen(G, matchInfo);
       } else {
-        renderPractice(G); // 練習画面をHomeに描画
+        renderPractice(G);
       }
       break;
     }
@@ -217,6 +229,7 @@ async function onLogout() {
 // 週を進める
 // ==============================
 window.onAdvanceWeek = function() {
+  // 練習週・敗退済み試合週・出場未達成週の処理
   const matchInfo = MATCH_SCHEDULE[G.week];
   const tState = matchInfo ? G.tournaments[matchInfo.tournament] : null;
   const isMatchWeek = matchInfo && tState && !tState.eliminated && !tState.champion;
@@ -227,49 +240,41 @@ window.onAdvanceWeek = function() {
     if (matchInfo.tournament === 'spring' && !G.tournaments.spring_prelim.champion) qualified = false;
   }
 
-  if (isMatchWeek && qualified) {
-    // 試合週
-    if (!isStarterComplete(G)) {
-      showAlert('スタメンが揃っていません。チーム設定でスタメンを設定してください。');
-      return;
-    }
-    const result = simulateMatch(G, matchInfo);
-    saveGame(G);
-    setStateRef(G);
-    showMatchResult(result);
+  G.weeklyLog = [];
+  const isEliminated = matchInfo && tState && tState.eliminated;
+
+  if (isEliminated) {
+    G.weeklyLog.push('試合週（敗退済み）。スタミナが少し回復した。');
+    executeRestWeek(G);
   } else {
-    // 練習週 or 敗退済み試合週 or 出場未達成週
-    G.weeklyLog = [];
-    const isEliminated = matchInfo && tState && tState.eliminated;
-    const isUnqualified = isMatchWeek && !qualified;
-
-    if (isEliminated) {
-      // 敗退済み試合週は休養
-      G.weeklyLog.push('試合週（敗退済み）。スタミナが少し回復した。');
-      executeRestWeek(G);
-    } else {
-      // 通常練習
-      const { logs, results } = executePractice(G);
-      if (isUnqualified) G.weeklyLog.push('大会出場条件を満たしていないため練習を行いました。');
-      G.weeklyLog.push(...logs);
-      G.weeklyResults = results; // UI表示用に保存
-    }
-
-    advanceWeekEffects(G);
-    G.week++;
-
-    if (G.week >= 48) {
-      doYearEnd();
-      return;
-    }
-
-    // 保存とモーダル表示を開始
-    setStateRef(G);
-    showPracticeResult(G.weeklyResults || [], G.weeklyLog || []);
-
-    // 翌週のために休憩状態を解除
-    G.restingPlayerIds = [];
+    const { logs, results } = executePractice(G);
+    if (isMatchWeek && !qualified) G.weeklyLog.push('大会出場条件を満たしていないため練習を行いました。');
+    G.weeklyLog.push(...logs);
+    G.weeklyResults = results;
   }
+
+  advanceWeekEffects(G);
+  G.week++;
+
+  if (G.week >= 48) {
+    doYearEnd();
+    return;
+  }
+
+  setStateRef(G);
+  showPracticeResult(G.weeklyResults || [], G.weeklyLog || []);
+  G.restingPlayerIds = [];
+};
+
+// ==============================
+// 試合前画面から試合を開始
+// ==============================
+window.onStartMatch = function(opponent) {
+  const matchInfo = MATCH_SCHEDULE[G.week];
+  const result = simulateMatch(G, matchInfo, opponent);
+  saveGame(G);
+  setStateRef(G);
+  showMatchResult(result);
 };
 
 // ==============================
@@ -298,10 +303,14 @@ function doYearEnd() {
   const graduates = G.players.filter(p => p.grade === 3).map(p => ({ ...p }));
   yearEnd(G);
 
-  // スカウト済みでない分を補充入学
-  const newPlayers = [];
-  const scoutedCount = G.players.filter(p => p.grade === 1 && p._scouted).length;
-  const needed = Math.max(0, 4 - scoutedCount);
+  // スカウト済み選手を入部させる
+  const pendingScouts = G.pendingScouts || [];
+  pendingScouts.forEach(p => G.players.push(p));
+  G.pendingScouts = [];
+
+  // 残り枠を自動生成で補充
+  const newPlayers = [...pendingScouts];
+  const needed = Math.max(0, 4 - pendingScouts.length);
   for (let i = 0; i < needed; i++) {
     const p = generatePlayer(G.nextPlayerId++, 1, POSITIONS[i % POSITIONS.length], 22);
     newPlayers.push(p);
@@ -328,13 +337,7 @@ window.onStarterChange = function(slot, playerId) {
   }
   G.starters[slot] = playerId;
   saveGame(G);
-  const container = document.getElementById('tab-team');
-  const scrollY = container ? container.scrollTop : 0;
-  const pageScrollY = window.scrollY;
-  renderTeam(G);
-  if (container) container.scrollTop = scrollY;
-  window.scrollTo(0, pageScrollY);
-  updateStatusBar(G);
+  preserveScroll('#team-screen-content', () => { renderTeam(G); updateStatusBar(G); });
 };
 
 // ==============================
@@ -350,19 +353,13 @@ window.onGroupChange = function(groupIndex, playerId, checked) {
     G.practiceGroups[groupIndex].push(playerId);
   }
   saveGame(G);
-  // スクロール位置を保持して再描画
-  const container = document.getElementById('tab-team');
-  const scrollY = container ? container.scrollTop : 0;
-  const pageScrollY = window.scrollY;
-  renderTeam(G);
-  if (container) container.scrollTop = scrollY;
-  window.scrollTo(0, pageScrollY);
+  preserveScroll('#team-screen-content', () => renderTeam(G));
 };
 
 window.onAutoGroup = function() {
   autoAssignPracticeGroups(G);
   saveGame(G);
-  renderTeam(G);
+  preserveScroll('#team-screen-content', () => renderTeam(G));
 };
 
 // ==============================
@@ -371,24 +368,21 @@ window.onAutoGroup = function() {
 window.onPracticeSelect = function(groupIndex, menuId) {
   G.practiceSelections[groupIndex] = menuId;
   saveGame(G);
-  renderPractice(G);
+  preserveScroll('.practice-players-area', () => renderPractice(G));
 };
 
 // ==============================
 // 休憩切り替え
 // ==============================
 window.onToggleRest = function(playerId) {
-  // 既存セーブデータ対策: 未定義なら初期化
   if (!G.restingPlayerIds) G.restingPlayerIds = [];
-  
   const index = G.restingPlayerIds.indexOf(playerId);
   if (index >= 0) {
     G.restingPlayerIds.splice(index, 1);
   } else {
     G.restingPlayerIds.push(playerId);
   }
-  // 保存はせずメモリ上のみ（週をまたがない一時状態）
-  renderPractice(G);
+  preserveScroll('.practice-players-area', () => renderPractice(G));
 };
 
 // ==============================
@@ -402,8 +396,7 @@ window.onShopBuy = function(type, itemId) {
     G.points -= def.cost;
     G.inventory.push({ id: def.id, effect: def.effect, duration: def.duration });
     saveGame(G);
-    renderShop(G);
-    updateStatusBar(G);
+    preserveScroll('#tab-shop .panel-view', () => { renderShop(G); updateStatusBar(G); });
   } else if (type === 'facility') {
     const def = FACILITIES.find(f => f.id === itemId);
     if (!def) return;
@@ -412,8 +405,7 @@ window.onShopBuy = function(type, itemId) {
     G.points -= def.cost;
     G.facilities.push({ id: def.id, effect: def.effect, name: def.name });
     saveGame(G);
-    renderShop(G);
-    updateStatusBar(G);
+    preserveScroll('#tab-shop .panel-view', () => { renderShop(G); updateStatusBar(G); });
   }
 };
 
@@ -425,7 +417,7 @@ window.onUseItem = function(invIdx) {
   if (!result.success) { showAlert(result.msg); return; }
   if (result.isScout) { showAlert('スカウトチケットはスカウト画面から使用してください。'); return; }
   saveGame(G);
-  renderShop(G);
+  preserveScroll('#tab-shop .panel-view', () => renderShop(G));
   showAlert(result.msg);
 };
 
@@ -443,11 +435,12 @@ window.onScout = function(isGold) {
   const player = generateScoutPlayer(G.nextPlayerId++, G.reputation, isGold, position);
   player._scouted = true;
   player.grade = 1;
-  G.players.push(player);
+  G.pendingScouts = G.pendingScouts || [];
+  G.pendingScouts.push(player);
 
   saveGame(G);
   setStateRef(G);
-  renderScout(G);
+  preserveScroll('#tab-scout .panel-view', () => renderScout(G));
   showScoutResult(player);
 };
 

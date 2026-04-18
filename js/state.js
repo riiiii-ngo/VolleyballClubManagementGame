@@ -38,6 +38,7 @@ function createDefaultState() {
     weeklyResults: [],   // 今週の成長結果詳細
     practiceSelections: {}, // グループ毎の選択練習メニューID {groupIndex: menuId}
     restingPlayerIds: [],   // 個別に休憩させる選手のID
+    pendingScouts: [],      // 来年度入部予定のスカウト選手
     gameOver: false,
     titleScreenDone: false,
   };
@@ -171,6 +172,7 @@ function ensureStateFields(state) {
   if (!state.restingPlayerIds) state.restingPlayerIds = [];
   if (!state.weeklyResults) state.weeklyResults = [];
   if (!state.practiceSelections) state.practiceSelections = {};
+  if (!state.pendingScouts) state.pendingScouts = [];
   return state;
 }
 
