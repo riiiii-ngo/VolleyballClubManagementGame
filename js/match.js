@@ -370,6 +370,9 @@ function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
   addRepPoints(state, repGain);
   state.points = Math.max(0, state.points + shopGain);
 
+  // 最高戦績の更新チェック
+  updateBestRecord(state, matchInfo.tournament, tState.currentRound, tState.champion);
+
   const result = {
     success: true,
     won,

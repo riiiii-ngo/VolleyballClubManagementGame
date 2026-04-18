@@ -121,13 +121,16 @@ body {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  padding: 4px 12px;
-  transition: color 0.2s;
+  padding: 4px 8px;
+  transition: all 0.2s;
   -webkit-tap-highlight-color: transparent;
+  min-width: 60px;
 }
 .tab-icon { font-size: 1.4rem; line-height: 1; }
-.tab-label { line-height: 1.2; }
+.tab-label { line-height: 1.2; font-size: 0.62rem; }
 .tab-btn.active { color: var(--accent); }
+.tab-btn.match-active-tab { color: var(--orange); }
+.tab-btn.match-active-tab.active { color: var(--orange); font-weight: 800; }
 .tab-btn:active { transform: scale(0.92); }
 
 /* ==============================
@@ -1853,8 +1856,8 @@ button {
   justify-content: space-between;
   background: #1C1C1E;
   color: #fff;
-  padding: 10px 16px;
-  font-size: 0.85rem;
+  padding: 8px 16px;
+  font-size: 0.8rem;
   font-weight: 600;
 }
 .prematch-info-text { flex: 1; }
@@ -1869,9 +1872,9 @@ button {
 /* ② セットスコア */
 .prematch-score-area {
   background: #fff;
-  padding: 10px 12px;
-  margin: 8px 12px 0;
-  border-radius: 12px;
+  padding: 8px 10px;
+  margin: 6px 10px 0;
+  border-radius: 10px;
 }
 .prematch-score-row {
   display: flex;
@@ -1908,9 +1911,9 @@ button {
 /* ③ 対戦カード */
 .prematch-card {
   background: #fff;
-  margin: 8px 12px 0;
-  border-radius: 12px;
-  padding: 12px;
+  margin: 6px 10px 0;
+  border-radius: 10px;
+  padding: 10px;
 }
 .prematch-card-title {
   text-align: center;
@@ -1969,13 +1972,13 @@ button {
 }
 
 .prematch-radar-wrap {
-  width: 120px;
-  height: 120px;
-  margin-bottom: 8px;
+  width: 100px;
+  height: 100px;
+  margin-bottom: 4px;
 }
 .prematch-radar-wrap canvas {
-  width: 120px !important;
-  height: 120px !important;
+  width: 100px !important;
+  height: 100px !important;
 }
 
 .prematch-stats {
@@ -2004,9 +2007,9 @@ button {
 /* ④ アクションボタン */
 .prematch-actions {
   display: flex;
-  gap: 8px;
-  padding: 12px;
-  margin-top: 8px;
+  gap: 6px;
+  padding: 8px 10px;
+  margin-top: 6px;
 }
 .prematch-btn {
   flex: 1;
@@ -2108,3 +2111,240 @@ button {
 }
 .order-actions { padding: 0 12px 12px; }
 
+/* モーダル内のテーブル表示 */
+.roster-table.mini {
+  font-size: 0.75rem;
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed; /* 追加: カラム幅を固定 */
+}
+.roster-table.mini th, .roster-table.mini td {
+  padding: 6px 2px;
+  text-align: center;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.roster-table.mini th:nth-child(1), 
+.roster-table.mini td:nth-child(1) { width: 32px; } /* POS */
+.roster-table.mini th:nth-child(2), 
+.roster-table.mini td:nth-child(2) { width: auto; text-align: left; } /* 名前 */
+.roster-table.mini th:nth-child(3), 
+.roster-table.mini td:nth-child(3) { width: 34px; } /* OVR または 学年 */
+.roster-table.mini th:nth-child(4), 
+.roster-table.mini td:nth-child(4) { width: 34px; } /* 4列目(相手データ時はOVR) */
+
+.wide-modal {
+  max-width: 600px !important;
+}
+.modal-scroll-area {
+  flex: 1;
+  overflow-y: auto;
+  background: #fff;
+}
+.opp-ovr {
+  color: var(--accent);
+  text-align: center;
+}
+.starter-row {
+  background: rgba(0, 122, 255, 0.05);
+}
+.badge-st {
+  background: var(--accent);
+  color: #fff;
+  font-size: 0.6rem;
+  padding: 1px 4px;
+  font-weight: 800;
+}
+
+/* ============================================================
+   新ダッシュボード (ホーム画面)
+   ============================================================ */
+.dash-container {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  background: #F2F2F7;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.dash-card {
+  background: #FFFFFF;
+  border-radius: 16px;
+  padding: 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  border: 1px solid rgba(0,0,0,0.05);
+}
+
+.dash-card-header {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #8E8E93;
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dash-card-icon {
+  font-size: 1rem;
+}
+
+/* カウントダウンカード */
+.dash-countdown {
+  background: linear-gradient(135deg, #1C1C1E 0%, #3A3A3C 100%);
+  color: #FFFFFF;
+  border: none;
+}
+.dash-countdown .dash-card-header { color: rgba(255,255,255,0.6); }
+
+.dash-countdown-main {
+  font-size: 1.2rem;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.dash-countdown-number {
+  font-size: 2.8rem;
+  font-weight: 900;
+  color: #FF9500;
+  margin: 0 4px;
+  font-variant-numeric: tabular-nums;
+}
+.dash-countdown-sub {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  font-weight: 600;
+}
+
+/* 戦績リスト */
+.dash-records-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.dash-record-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #F2F2F7;
+}
+.dash-record-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+.dash-record-label {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #1C1C1E;
+}
+.dash-record-value {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: #007AFF;
+}
+
+/* 遊び方ボタン */
+.dash-help-container {
+  display: flex;
+  justify-content: center;
+}
+.btn-help {
+  background: #FFFFFF;
+  border: 1.5px solid #D1D1D6;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #3C3C43;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+}
+.btn-help:active { transform: scale(0.96); background: #F2F2F7; }
+.btn-help-icon { font-size: 1.1rem; }
+
+/* ダッシュボードアクションエリア */
+.dash-action-area {
+  margin-top: 8px;
+  padding-bottom: 24px;
+}
+.btn-dash-main {
+  background: linear-gradient(135deg, #007AFF 0%, #0056B3 100%);
+  color: #FFFFFF;
+  border: none;
+  border-radius: 16px;
+  padding: 18px;
+  width: 100%;
+  font-size: 1.1rem;
+  font-weight: 800;
+  box-shadow: 0 8px 16px rgba(0,122,255,0.25);
+  transition: all 0.2s;
+}
+.btn-dash-main:active { transform: scale(0.97); box-shadow: 0 4px 8px rgba(0,122,255,0.2); }
+
+/* ============================================================
+   遊び方モーダル
+   ============================================================ */
+.help-modal {
+  max-width: 480px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.help-scroll-body {
+  padding: 24px;
+  overflow-y: auto;
+  background: #FFFFFF;
+}
+.help-title {
+  font-size: 1.4rem;
+  font-weight: 900;
+  margin-bottom: 24px;
+  text-align: center;
+  color: #1C1C1E;
+}
+.help-section {
+  margin-bottom: 24px;
+}
+.help-sec-title {
+  font-size: 1rem;
+  font-weight: 800;
+  color: #007AFF;
+  margin-bottom: 12px;
+  border-bottom: 2px solid #F2F2F7;
+  padding-bottom: 4px;
+}
+.help-list {
+  padding-left: 18px;
+  margin: 0;
+}
+.help-list li {
+  font-size: 0.88rem;
+  color: #3C3C43;
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+.help-section p {
+  font-size: 0.88rem;
+  color: #3C3C43;
+  margin-bottom: 8px;
+}
+.help-tips {
+  background: #F2F2F7;
+  padding: 16px;
+  border-radius: 12px;
+}
+.modal-footer {
+  padding: 16px 24px 24px;
+  background: #FFFFFF;
+  border-top: 1px solid #F2F2F7;
+}

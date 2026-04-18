@@ -39,6 +39,12 @@ function createDefaultState() {
     practiceSelections: {}, // グループ毎の選択練習メニューID {groupIndex: menuId}
     restingPlayerIds: [],   // 個別に休憩させる選手のID
     pendingScouts: [],      // 来年度入部予定のスカウト選手
+    bestRecords: {          // 過去最高戦績 { tournamentId: { round, year, champion } }
+      prefectural:   { round: -1, year: 0, champion: false },
+      interhigh:     { round: -1, year: 0, champion: false },
+      spring_prelim: { round: -1, year: 0, champion: false },
+      spring:        { round: -1, year: 0, champion: false },
+    },
     gameOver: false,
     titleScreenDone: false,
   };
@@ -111,6 +117,16 @@ function migrateState(state) {
     state.restingPlayerIds = [];
   }
   
+  // bestRecords の初期化
+  if (state.bestRecords === undefined) {
+    state.bestRecords = {
+      prefectural:   { round: -1, year: 0, champion: false },
+      interhigh:     { round: -1, year: 0, champion: false },
+      spring_prelim: { round: -1, year: 0, champion: false },
+      spring:        { round: -1, year: 0, champion: false },
+    };
+  }
+  
   // その他の将来的なフィールド追加にも対応しやすいように
   return state;
 }
@@ -173,7 +189,41 @@ function ensureStateFields(state) {
   if (!state.weeklyResults) state.weeklyResults = [];
   if (!state.practiceSelections) state.practiceSelections = {};
   if (!state.pendingScouts) state.pendingScouts = [];
+  if (!state.bestRecords) {
+    state.bestRecords = {
+      prefectural:   { round: -1, year: 0, champion: false },
+      interhigh:     { round: -1, year: 0, champion: false },
+      spring_prelim: { round: -1, year: 0, champion: false },
+      spring:        { round: -1, year: 0, champion: false },
+    };
+  }
   return state;
+}
+
+/**
+ * 最高戦績を更新する
+ * 同じ記録の場合は、最古の年を優先するため更新しない
+ */
+function updateBestRecord(state, tournamentId, round, isChampion) {
+  if (!state.bestRecords) state.bestRecords = {};
+  const currentBest = state.bestRecords[tournamentId];
+  
+  let improved = false;
+  if (!currentBest || currentBest.round === -1) {
+    improved = true;
+  } else if (isChampion && !currentBest.champion) {
+    improved = true;
+  } else if (!isChampion && !currentBest.champion && round > currentBest.round) {
+    improved = true;
+  }
+
+  if (improved) {
+    state.bestRecords[tournamentId] = {
+      round: round,
+      year: state.year,
+      champion: isChampion
+    };
+  }
 }
 
 // ==============================

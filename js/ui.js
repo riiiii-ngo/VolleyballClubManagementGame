@@ -2,6 +2,19 @@
 // ui.js - UI描画
 // ============================================================
 
+// 大会ラウンドの日本語表示用定数
+const ROUND_NAMES = {
+  "0": "1回戦",
+  "1": "準決勝",
+  "2": "決勝"
+};
+
+const ROUND_PROGRESS_TEXTS = {
+  "0": { win: "準決勝進出", lose: "初戦敗退" },
+  "1": { win: "決勝進出", lose: "ベスト4" },
+  "2": { win: "優勝", lose: "準優勝" }
+};
+
 // ==============================
 // ローディングオーバーレイ
 // ==============================
@@ -147,6 +160,93 @@ function updateStatusBar(state) {
     const sts = staminaStatus(avg);
     avgEl.innerHTML = `<span style="color:${sts.color}">${avg}</span>`;
   }
+
+  // フッタータブのラベルを動的に変更 (練習/試合タブ)
+  const actionTabBtn = document.getElementById('tab-btn-action');
+  if (actionTabBtn) {
+    const isMatchWeek = next && next.week === state.week;
+    
+    // 出場資格チェックも考慮
+    let qualified = true;
+    if (isMatchWeek) {
+      if (next.tournament === 'interhigh' && !state.tournaments.prefectural.champion) qualified = false;
+      if (next.tournament === 'spring' && !state.tournaments.spring_prelim.champion) qualified = false;
+    }
+
+    const labelEl = actionTabBtn.querySelector('.tab-label');
+    const iconEl  = actionTabBtn.querySelector('.tab-icon');
+    if (labelEl && iconEl) {
+      if (isMatchWeek && qualified) {
+        labelEl.textContent = '試合';
+        iconEl.textContent  = '🏐';
+        actionTabBtn.classList.add('match-active-tab');
+      } else {
+        labelEl.textContent = '練習';
+        iconEl.textContent  = '🏠';
+        actionTabBtn.classList.remove('match-active-tab');
+      }
+    }
+  }
+}
+
+// ==============================
+// ホーム画面（ダッシュボード）用ヘルパー
+// ==============================
+
+/**
+ * 次の試合までの週数を取得する
+ */
+function getMatchCountdown(state) {
+  // 4週間以内を走査
+  for (let w = state.week; w <= state.week + 4 && w < 48; w++) {
+    const info = MATCH_SCHEDULE[w];
+    if (!info) continue;
+    const tState = state.tournaments[info.tournament];
+    // 出場資格の簡易チェック
+    let qualified = true;
+    if (info.tournament === 'interhigh' && !state.tournaments.prefectural.champion) qualified = false;
+    if (info.tournament === 'spring' && !state.tournaments.spring_prelim.champion) qualified = false;
+    
+    if (qualified && !tState.eliminated && !tState.champion) {
+      return { weeks: w - state.week, name: info.name };
+    }
+  }
+  return null;
+}
+
+/**
+ * 大会の戦績を日本語テキストに変換する
+ */
+function getRecordText(tState) {
+  if (tState.champion) return "優勝";
+  if (tState.eliminated) {
+    if (tState.currentRound === 0) return "初戦敗退";
+    if (tState.currentRound === 1) return "ベスト4";
+    if (tState.currentRound === 2) return "準優勝";
+  }
+  if (tState.currentRound === 1) return "準決勝進出";
+  if (tState.currentRound === 2) return "決勝進出";
+  if (tState.currentRound === 0) {
+    // 進行中（未敗退・未優勝・1回戦前）
+    return "未出場";
+  }
+  return "-";
+}
+
+/**
+ * 過去最高戦績を日本語テキストに変換する
+ */
+function getBestRecordText(bestRecord) {
+  if (!bestRecord || bestRecord.round === -1) return "記録なし";
+  if (bestRecord.champion) return `${bestRecord.year}年目 優勝`;
+  
+  // 敗退時の表現としてマッピング
+  let roundText = "";
+  if (bestRecord.round === 0) roundText = "初戦敗退";
+  else if (bestRecord.round === 1) roundText = "ベスト4";
+  else if (bestRecord.round === 2) roundText = "準優勝";
+  
+  return `${bestRecord.year}年目 ${roundText}`;
 }
 
 // action-footer の内容をセット/クリアするヘルパー
@@ -410,10 +510,13 @@ function renderTeamMenu(state) {
 
   const ctx = document.getElementById('team-radar-chart');
   if (ctx && window.Chart) {
+    const labels = ['スパイク', 'レシーブ', 'ブロック', 'トス', 'サーブ'];
+    const radarDataLabels = labels.map((label, i) => `${label}(${getRank(radarData[i]).label})`);
+
     new Chart(ctx, {
       type: 'radar',
       data: {
-        labels: ['スパイク', 'レシーブ', 'ブロック', 'トス', 'サーブ'],
+        labels: radarDataLabels,
         datasets: [{
           label: 'スタメン平均',
           data: radarData,
@@ -668,7 +771,7 @@ let practiceSelectedGroup = 0;
 
 function renderPractice(state) {
   setActionFooter('');
-  const el = document.getElementById('tab-home');
+  const el = document.getElementById('tab-action');
   const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
   const menus = getAvailablePracticeMenus(state.reputation);
   const eff   = getPracticeEfficiency(state);
@@ -1111,7 +1214,10 @@ function showPreMatchScreen(state, matchInfo) {
     </div>`).join('');
 
   setActionFooter('');
-  const el = document.getElementById('tab-home');
+  const el = document.getElementById('tab-action');
+  // 描画前に確実にクリアし、イベントの再登録を促す
+  el.innerHTML = '';
+  
   el.innerHTML = `
     <div class="prematch-screen">
       <div class="prematch-info-bar">
@@ -1138,35 +1244,31 @@ function showPreMatchScreen(state, matchInfo) {
         <div class="prematch-card-title">${matchInfo.name}</div>
         <div class="prematch-teams">
           <div class="prematch-team prematch-team-home">
-            <div class="prematch-serve-badge home">先攻</div>
             <div class="prematch-team-name">バレー部</div>
             <div class="prematch-team-rep" style="color:${ownRepColor}">${ownRepLabel}</div>
             <div class="prematch-radar-wrap">
               <canvas id="prematch-radar-a"></canvas>
             </div>
-            <div class="prematch-stats">${statRows(ownAvg)}</div>
-            <div class="prematch-overall">総合 ${ownOverall} ${renderRank(ownOverall)}</div>
+            <div class="prematch-overall">総合  ${renderRank(ownOverall)}</div>
           </div>
 
           <div class="prematch-vs">VS</div>
 
           <div class="prematch-team prematch-team-away">
-            <div class="prematch-serve-badge away">後攻</div>
             <div class="prematch-team-name">${opponent.name}</div>
             <div class="prematch-team-rep" style="color:${oppRepColor}">${oppRepLabel}</div>
             <div class="prematch-radar-wrap">
               <canvas id="prematch-radar-b"></canvas>
             </div>
-            <div class="prematch-stats">${statRows(oppAvg)}</div>
-            <div class="prematch-overall">総合 ${oppOverall} ${renderRank(oppOverall)}</div>
+            <div class="prematch-overall">総合  ${renderRank(oppOverall)}</div>
           </div>
         </div>
       </div>
 
       <div class="prematch-actions">
-        <button class="prematch-btn" id="btn-opponent-data">相手データ</button>
         <button class="prematch-btn" id="btn-order">オーダー</button>
         <button class="prematch-btn prematch-btn-start" id="btn-start-match">試合開始 ▶</button>
+        <button class="prematch-btn" id="btn-opponent-data">相手データ</button>
       </div>
     </div>
   `;
@@ -1209,127 +1311,140 @@ function showPreMatchScreen(state, matchInfo) {
     const ctxA = document.getElementById('prematch-radar-a');
     if (ctxA && window.Chart) {
       const cfg = chartOpts('0, 122, 255');
+      cfg.data.labels = VOLLEYBALL_STATS.map(k => `${PARAM_NAMES[k]}(${getRank(ownAvg[k]).label})`);
       cfg.data.datasets[0].data = VOLLEYBALL_STATS.map(k => ownAvg[k]);
       new Chart(ctxA, cfg);
     }
     const ctxB = document.getElementById('prematch-radar-b');
     if (ctxB && window.Chart) {
       const cfg = chartOpts('255, 59, 48');
+      cfg.data.labels = VOLLEYBALL_STATS.map(k => `${PARAM_NAMES[k]}(${getRank(oppAvg[k]).label})`);
       cfg.data.datasets[0].data = VOLLEYBALL_STATS.map(k => oppAvg[k]);
       new Chart(ctxB, cfg);
     }
   }, 0);
 
   // ボタンハンドラ
-  document.getElementById('btn-start-match').addEventListener('click', () => {
-    window.onStartMatch(opponent);
-  });
+  const setupHandlers = () => {
+    document.getElementById('btn-start-match')?.addEventListener('click', () => {
+      window.onStartMatch(opponent);
+    });
 
-  document.getElementById('btn-opponent-data').addEventListener('click', () => {
-    showOpponentDataModal(opponent, state, matchInfo);
-  });
+    document.getElementById('btn-opponent-data')?.addEventListener('click', () => {
+      showOpponentDataModal(opponent, state, matchInfo);
+    });
 
-  document.getElementById('btn-order').addEventListener('click', () => {
-    showOrderModal(state, matchInfo);
-  });
+    document.getElementById('btn-order')?.addEventListener('click', () => {
+      showOrderModal(state, matchInfo);
+    });
 
-  document.getElementById('btn-prematch-settings').addEventListener('click', () => {
-    showAlert(`試合形式: 最大${matchInfo.maxSets}セット`);
-  });
+    document.getElementById('btn-prematch-settings')?.addEventListener('click', () => {
+      showAlert(`試合形式: 最大${matchInfo.maxSets}セット`);
+    });
+  };
+
+  // DOMが確実に構築されたあとにイベントを付与
+  setTimeout(setupHandlers, 0);
 }
 
 function showOpponentDataModal(opponent, state, matchInfo) {
   const modal = document.getElementById('modal');
-  const VOLLEYBALL_STATS = ['spike', 'serve', 'block', 'receive', 'toss'];
+  const statsToShow = PARAM_KEYS.filter(k => k !== 'stamina');
+  
   const rows = opponent.players.map(p => `
-    <div class="opponent-player-row">
-      <span class="opp-pos">${p.position}</span>
-      <span class="opp-name">${p.name}</span>
-      ${VOLLEYBALL_STATS.map(k => `<span class="opp-stat">${renderRank(p.params[k])}</span>`).join('')}
-    </div>
+    <tr class="opponent-player-row">
+      <td class="opp-pos">${p.position}</td>
+      <td class="opp-name">${p.name}</td>
+      <td class="opp-ovr"><strong>${playerOverall(p)}</strong></td>
+      ${statsToShow.map(k => `<td class="opp-stat">${renderRank(p.params[k])}</td>`).join('')}
+    </tr>
   `).join('');
 
   modal.innerHTML = `
-    <div class="prematch-inner-modal">
+    <div class="prematch-inner-modal wide-modal">
       <div class="prematch-inner-header">
         <span>${opponent.name} 選手データ</span>
         <button class="prematch-inner-close" id="btn-opp-back">← 戻る</button>
       </div>
-      <div class="opponent-players-header">
-        <span class="opp-pos">POS</span>
-        <span class="opp-name">名前</span>
-        ${VOLLEYBALL_STATS.map(k => `<span class="opp-stat">${PARAM_NAMES[k]}</span>`).join('')}
+      <div class="modal-scroll-area">
+        <table class="roster-table mini">
+          <thead>
+            <tr>
+              <th>POS</th>
+              <th>名前</th>
+              <th>OVR</th>
+              ${statsToShow.map(k => `<th>${PARAM_NAMES[k].substring(0,2)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
       </div>
-      <div class="opponent-players-list">${rows}</div>
     </div>
   `;
+  modal.style.display = 'flex'; // 追加: モーダルを確実に表示
   document.getElementById('btn-opp-back').addEventListener('click', () => {
     modal.style.display = 'none';
     modal.innerHTML = '';
-    showPreMatchScreen(state, matchInfo);
   });
 }
 
 function showOrderModal(state, matchInfo) {
   const modal = document.getElementById('modal');
-  const SLOTS = ['OH1','OH2','MB1','MB2','OP','Se','Li'];
-  const SLOT_LABELS = { OH1:'OH①', OH2:'OH②', MB1:'MB①', MB2:'MB②', OP:'OP', Se:'Se', Li:'Li' };
-  const SLOT_POSITIONS = { OH1:'OH', OH2:'OH', MB1:'MB', MB2:'MB', OP:'OP', Se:'Se', Li:'Li' };
+  const statsToShow = PARAM_KEYS.filter(k => k !== 'stamina');
 
-  const eligible = (slot) => state.players.filter(p =>
-    !p.isInjured && p.position === SLOT_POSITIONS[slot]
-  );
+  // スタメンを優先的に上に表示
+  const starterIds = Object.values(state.starters);
+  const sortedPlayers = [...state.players].sort((a, b) => {
+    const aIsStarter = starterIds.includes(a.id);
+    const bIsStarter = starterIds.includes(b.id);
+    if (aIsStarter && !bIsStarter) return -1;
+    if (!aIsStarter && bIsStarter) return 1;
+    return b.grade - a.grade || playerOverall(b) - playerOverall(a);
+  });
 
-  const selects = SLOTS.map(slot => {
-    const opts = eligible(slot).map(p =>
-      `<option value="${p.id}" ${state.starters[slot] === p.id ? 'selected' : ''}>
-        ${p.name} (${Math.round(p.params.spike+p.params.receive+p.params.block+p.params.serve+p.params.toss)/5 | 0})
-      </option>`
-    ).join('');
+  const rows = sortedPlayers.map(p => {
+    const isStarter = starterIds.includes(p.id);
     return `
-      <div class="order-slot-row">
-        <span class="order-slot-label">${SLOT_LABELS[slot]}</span>
-        <select class="order-slot-select" data-slot="${slot}">
-          <option value="">未設定</option>${opts}
-        </select>
-      </div>`;
+      <tr class="${isStarter ? 'starter-row' : ''}" style="${p.isInjured ? 'opacity:0.4' : ''}">
+        <td>${isStarter ? '<span class="badge-st">先</span>' : ''} ${p.isAllRounder ? '全' : p.position}</td>
+        <td>${p.name}</td>
+        <td>${p.grade}年</td>
+        <td><strong>${playerOverall(p)}</strong></td>
+        ${statsToShow.map(k => `<td>${renderRank(p.params[k])}</td>`).join('')}
+      </tr>
+    `;
   }).join('');
 
   modal.innerHTML = `
-    <div class="prematch-inner-modal">
+    <div class="prematch-inner-modal wide-modal">
       <div class="prematch-inner-header">
-        <span>スタメン設定</span>
+        <span>自チーム オーダー確認</span>
         <button class="prematch-inner-close" id="btn-order-back">← 戻る</button>
       </div>
-      <div class="order-slots">${selects}</div>
-      <div class="order-actions">
-        <button class="prematch-btn prematch-btn-start" id="btn-order-confirm">確定</button>
+      <div class="modal-scroll-area">
+        <table class="roster-table mini">
+          <thead>
+            <tr>
+              <th>Pos</th>
+              <th>名前</th>
+              <th>学年</th>
+              <th>OVR</th>
+              ${statsToShow.map(k => `<th>${PARAM_NAMES[k].substring(0,2)}</th>`).join('')}
+            </tr>
+          </thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      <div style="font-size:0.75rem; color:#666; margin-top:10px; text-align:right;">
+        ※スタメン変更はチームメニューから行えます
       </div>
     </div>
   `;
+  modal.style.display = 'flex'; // 追加: モーダルを確実に表示
 
   document.getElementById('btn-order-back').addEventListener('click', () => {
     modal.style.display = 'none';
     modal.innerHTML = '';
-    showPreMatchScreen(state, matchInfo);
-  });
-
-  document.getElementById('btn-order-confirm').addEventListener('click', () => {
-    document.querySelectorAll('.order-slot-select').forEach(sel => {
-      const slot = sel.dataset.slot;
-      const val = sel.value ? parseInt(sel.value) : null;
-      if (val) {
-        for (const [s, id] of Object.entries(state.starters)) {
-          if (s !== slot && id === val) state.starters[s] = null;
-        }
-      }
-      state.starters[slot] = val;
-    });
-    saveGame(state);
-    setStateRef(state);
-    modal.style.display = 'none';
-    modal.innerHTML = '';
-    showPreMatchScreen(state, matchInfo);
   });
 }
 
@@ -1576,6 +1691,220 @@ function showAlert(msg) {
     </div>`;
   modal.style.display = 'flex';
   document.getElementById('modal-close').addEventListener('click', () => modal.style.display = 'none');
+}
+
+/**
+ * ホーム画面（ダッシュボード）の描画
+ */
+function renderHomeDashboard(state) {
+  const el = document.getElementById('tab-home');
+  
+  // ① カウントダウン
+  const countdown = getMatchCountdown(state);
+  let countdownHtml = "";
+  if (countdown) {
+    const countdownWeeks = Math.max(0, countdown.weeks);
+    countdownHtml = `
+      <div class="dash-card dash-countdown">
+        <div class="dash-card-header">
+          <span class="dash-card-icon">🎯</span> 次の試合まで
+        </div>
+        <div class="dash-countdown-main">
+          あと <span class="dash-countdown-number">${countdownWeeks}</span> 週
+        </div>
+        <div class="dash-countdown-sub">${countdown.name}</div>
+      </div>
+    `;
+  }
+
+  // ② 現在の戦績
+  const tournaments = [
+    { id: "prefectural",   label: "県大会" },
+    { id: "interhigh",     label: "インターハイ" },
+    { id: "spring_prelim", label: "春高予選" },
+    { id: "spring",        label: "春高" }
+  ];
+
+  let currentRecordsHtml = `
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <span class="dash-card-icon">📊</span> 今シーズンの戦績
+      </div>
+      <div class="dash-records-list">
+  `;
+  tournaments.forEach(t => {
+    const tState = state.tournaments[t.id];
+    currentRecordsHtml += `
+      <div class="dash-record-item">
+        <span class="dash-record-label">${t.label}</span>
+        <span class="dash-record-value">${getRecordText(tState)}</span>
+      </div>
+    `;
+  });
+  currentRecordsHtml += `</div></div>`;
+
+  // ③ 過去最高戦績
+  let bestRecordsHtml = `
+    <div class="dash-card">
+      <div class="dash-card-header">
+        <span class="dash-card-icon">👑</span> 歴代最高記録
+      </div>
+      <div class="dash-records-list">
+  `;
+  tournaments.forEach(t => {
+    const best = state.bestRecords ? state.bestRecords[t.id] : null;
+    bestRecordsHtml += `
+      <div class="dash-record-item">
+        <span class="dash-record-label">${t.label}</span>
+        <span class="dash-record-value">${getBestRecordText(best)}</span>
+      </div>
+    `;
+  });
+  bestRecordsHtml += `</div></div>`;
+
+  // ④ 遊び方ボタン
+  const helpButtonHtml = `
+    <div class="dash-help-container">
+      <button class="btn-help" onclick="window.showHowToPlay()">
+        <span class="btn-help-icon">❓</span> 遊び方を確認する
+      </button>
+    </div>
+  `;
+
+  // メインボタン（練習/試合へ）
+  const nextMatch = getNextMatchInfo(state);
+  const isMatchWeek = nextMatch && nextMatch.week === state.week;
+  
+  // 出場資格チェック
+  let qualified = true;
+  if (isMatchWeek) {
+    if (nextMatch.tournament === 'interhigh' && !state.tournaments.prefectural.champion) qualified = false;
+    if (nextMatch.tournament === 'spring' && !state.tournaments.spring_prelim.champion) qualified = false;
+  }
+
+  const btnText = (isMatchWeek && qualified) ? `🏐 試合に進む（${nextMatch.name}）` : "💪 練習・チーム管理へ進む";
+
+  el.innerHTML = `
+    <div class="dash-container">
+      ${countdownHtml}
+      ${currentRecordsHtml}
+      ${bestRecordsHtml}
+      ${helpButtonHtml}
+      
+      <div class="dash-action-area">
+        <button class="btn-dash-main" onclick="switchTabPublic('action')">
+          ${btnText}
+        </button>
+      </div>
+    </div>
+  `;
+
+  // action-footer はクリア
+  setActionFooter('');
+}
+
+/**
+ * 遊び方モーダルの表示
+ */
+window.showHowToPlay = function() {
+  const modal = document.getElementById('modal');
+  modal.innerHTML = `
+    <div class="modal-content help-modal">
+      <div class="help-scroll-body">
+        <h2 class="help-title">🏐 遊び方ガイド</h2>
+        
+        <section class="help-section">
+          <h3 class="help-sec-title">【1. 基本のサイクル】</h3>
+          <p>ゲームは<strong>1年48週</strong>のサイクルで進みます。</p>
+          <ul class="help-list">
+            <li><strong>平日:</strong> 練習メニューを組み、「週を進める」で選手を成長させます。</li>
+            <li><strong>大会週:</strong> トーナメント戦（インターハイ、春高など）に出場し、勝利を目指します。</li>
+            <li><strong>年度末:</strong> 3年生が引退し、スカウトした新入生が加わります。</li>
+          </ul>
+        </section>
+
+        <section class="help-section">
+          <h3 class="help-sec-title">【2. 練習と成長】</h3>
+          <ul class="help-list">
+            <li><strong>グループ分け:</strong> 選手をA・B・Cの3つのグループに振り分けられます（例：スタメン組、控え組など）。</li>
+            <li><strong>メニュー選択:</strong> 「パス練習」「スパイク練習」など、伸ばしたい能力に合わせてメニューを選びましょう。</li>
+            <li><strong>スタミナ管理:</strong> 練習を続けると体力が減ります。体力が低いと成長効率が下がるため、適度に<strong>「休憩」</strong>をさせて回復させることが重要です。</li>
+          </ul>
+        </section>
+
+        <section class="help-section">
+          <h3 class="help-sec-title">【3. チーム編成】</h3>
+          <ul class="help-list">
+            <li><strong>ポジション:</strong> 5つのポジション（OH, MB, OP, Se, Li）があります。適性のある選手をスタメンに配置しましょう。</li>
+            <li><strong>スカウト:</strong> 勝利して「評判」が上がると、より才能豊かな中学生を勧誘できるようになります。</li>
+          </ul>
+        </section>
+
+        <section class="help-section">
+          <h3 class="help-sec-title">【4. ショップと設備】</h3>
+          <ul class="help-list">
+            <li><strong>ポイント:</strong> 試合に勝つとポイントが手に入ります。</li>
+            <li><strong>アイテム・設備:</strong> スタミナ回復アイテムや、練習効率を上げる設備をショップで購入できます。</li>
+          </ul>
+        </section>
+
+        <section class="help-section help-tips">
+          <h3 class="help-sec-title">💡 勝利へのコツ</h3>
+          <ul class="help-list">
+            <li>スタミナを枯らさない</li>
+            <li>評判を上げる</li>
+            <li>特化育成を意識する</li>
+          </ul>
+        </section>
+
+        <section class="help-section">
+          <h3 class="help-sec-title">📱 画面の見かた</h3>
+          <ul class="help-list">
+            <li><strong>ホーム:</strong> 現在の戦績や次の試合を確認</li>
+            <li><strong>練習:</strong> メニューを決めて1週間を進める</li>
+            <li><strong>チーム:</strong> スタメン変更やグループ分け</li>
+            <li><strong>スカウト:</strong> 新入生獲得</li>
+            <li><strong>ショップ:</strong> アイテム・設備購入</li>
+          </ul>
+        </section>
+      </div>
+      <div class="modal-footer">
+        <button id="modal-close-help" class="btn-primary btn-full">閉じる</button>
+      </div>
+    </div>
+  `;
+  modal.style.display = 'flex';
+  document.getElementById('modal-close-help').addEventListener('click', () => modal.style.display = 'none');
+};
+
+/**
+ * ダッシュボードからのアクション遷移
+ */
+window.onAdvanceToAction = function() {
+  switchTabPublic('action');
+};
+
+/**
+ * 従来の練習/試合前画面
+ */
+function renderPracticeArea(state) {
+  const el = document.getElementById('tab-action');
+  
+  const matchInfo = MATCH_SCHEDULE[state.week];
+  const tState = matchInfo ? state.tournaments[matchInfo.tournament] : null;
+  const isMatchWeek = matchInfo && tState && !tState.eliminated && !tState.champion;
+  
+  let qualified = true;
+  if (isMatchWeek) {
+    if (matchInfo.tournament === 'interhigh' && !state.tournaments.prefectural.champion) qualified = false;
+    if (matchInfo.tournament === 'spring' && !state.tournaments.spring_prelim.champion) qualified = false;
+  }
+
+  if (isMatchWeek && qualified) {
+    showPreMatchScreen(state, matchInfo);
+  } else {
+    renderPractice(state);
+  }
 }
 
 // グローバル参照（試合結果モーダルで使用）

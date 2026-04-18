@@ -121,15 +121,19 @@ function startMainGame() {
       <img src="assets/chara_manager.png" class="chara-image" alt="">
     </div>
     <main class="app-main">
-      <div id="tab-home"  class="tab-content active"></div>
-      <div id="tab-team"  class="tab-content"></div>
-      <div id="tab-scout" class="tab-content"></div>
-      <div id="tab-shop"  class="tab-content"></div>
+      <div id="tab-home"    class="tab-content active"></div>
+      <div id="tab-action"  class="tab-content"></div>
+      <div id="tab-team"    class="tab-content"></div>
+      <div id="tab-scout"   class="tab-content"></div>
+      <div id="tab-shop"    class="tab-content"></div>
     </main>
     <div id="action-footer" class="action-footer" style="display:none"></div>
     <nav class="tab-nav">
-      <button class="tab-btn active" data-tab="home">
+      <button class="tab-btn active" data-tab="home" id="tab-btn-home">
         <span class="tab-icon">🏠</span><span class="tab-label">ホーム</span>
+      </button>
+      <button class="tab-btn" data-tab="action" id="tab-btn-action">
+        <span class="tab-icon">🏠</span><span class="tab-label">練習</span>
       </button>
       <button class="tab-btn" data-tab="team">
         <span class="tab-icon">👥</span><span class="tab-label">チーム</span>
@@ -186,21 +190,11 @@ function renderTab(tabId) {
   updateStatusBar(G);
   switch (tabId) {
     case 'home': {
-      // ホームタブは試合週か練習週かで表示を分ける
-      const matchInfo = MATCH_SCHEDULE[G.week];
-      const tState = matchInfo ? G.tournaments[matchInfo.tournament] : null;
-      const isMatchWeek = matchInfo && tState && !tState.eliminated && !tState.champion;
-      // 出場条件も考慮（未達成なら練習画面を表示）
-      let qualified = true;
-      if (isMatchWeek) {
-        if (matchInfo.tournament === 'interhigh' && !G.tournaments.prefectural.champion) qualified = false;
-        if (matchInfo.tournament === 'spring' && !G.tournaments.spring_prelim.champion) qualified = false;
-      }
-      if (isMatchWeek && qualified) {
-        showPreMatchScreen(G, matchInfo);
-      } else {
-        renderPractice(G);
-      }
+      renderHomeDashboard(G);
+      break;
+    }
+    case 'action': {
+      renderPracticeArea(G);
       break;
     }
     case 'team':     renderTeam(G);     break;
