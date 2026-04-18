@@ -665,6 +665,7 @@ const POSITION_PRIMARY_PARAM = {
 let practiceSelectedGroup = 0;
 
 function renderPractice(state) {
+  setActionFooter('');
   const el = document.getElementById('tab-home');
   const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
   const menus = getAvailablePracticeMenus(state.reputation);
@@ -793,10 +794,11 @@ function renderPractice(state) {
     const icon = PRACTICE_MENU_ICONS[menu.params[0]] || '📋';
     const paramsText = menu.params.map(k => PARAM_NAMES[k]).join('・');
     return `<div class="training-menu-card${isSelected ? ' selected' : ''}" data-menu-id="${menu.id}" role="button">
-      <div class="tmc-icon">${icon}</div>
-      <div class="tmc-name">${menu.name}</div>
+      <div class="tmc-header">
+        <span class="tmc-icon">${icon}</span>
+        <span class="tmc-name">${menu.name}</span>
+      </div>
       <div class="tmc-level">Lv.${menu.tier}</div>
-      <div class="tmc-params">${paramsText}</div>
     </div>`;
   }).join('');
 
@@ -860,19 +862,18 @@ function renderPractice(state) {
 
       <!-- ③ グループ選択 + 実行ボタン -->
       <div class="practice-bottom-area">
-        <div class="ps-section-label">
-          <span>グループ切り替え</span>
-        </div>
-        <div class="group-selector-row">
-          ${groupSelectorHtml}
+        <div class="group-and-start-row">
+          <div class="group-selector-scroll">
+            ${groupSelectorHtml}
+          </div>
+          <button id="btn-advance" class="btn-practice-start">
+            <span class="bps-icon">▶</span> 練習開始
+          </button>
         </div>
         <div class="practice-eff-row">
           <span class="eff-label">練習効率: <strong>${Math.round(eff * 100)}%</strong></span>
           ${effBadge}${facBadge}
         </div>
-        <button id="btn-advance" class="btn-practice-start">
-          <span class="bps-icon">▶</span> 練習開始
-        </button>
       </div>
 
     </div>
