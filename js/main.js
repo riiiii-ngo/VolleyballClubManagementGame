@@ -69,8 +69,11 @@ window.onNewGame = async function() {
   // 初期スカウトチケット2枚
   G.inventory.push({ id: 'scout_ticket', effect: 'scout' });
   G.inventory.push({ id: 'scout_ticket', effect: 'scout' });
-  saveGame(G);
-  startMainGame();
+  renderSchoolNameScreen((name) => {
+    G.schoolName = name;
+    saveGame(G);
+    startMainGame();
+  });
 };
 
 window.onContinue = async function() {
@@ -93,7 +96,7 @@ function startMainGame() {
   document.getElementById('app').innerHTML = `
     <header class="app-header">
       <div class="header-row">
-        <span class="header-team">🏐 バレー部</span>
+        <span class="header-team">🏐 ${G.schoolName || 'バレー部'}</span>
         <span id="ui-date" class="header-date"></span>
         <button id="btn-logout" class="btn-logout" title="ログアウト">⏏</button>
       </div>
@@ -287,7 +290,7 @@ window.onModalClose = function() {
   G.restingPlayerIds = []; // 翌週のためにリセット
   saveGame(G);
   setStateRef(G);
-  renderAll();
+  switchTabPublic('home');
 };
 
 // ==============================

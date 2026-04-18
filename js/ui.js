@@ -1244,7 +1244,7 @@ function showPreMatchScreen(state, matchInfo) {
         <div class="prematch-card-title">${matchInfo.name}</div>
         <div class="prematch-teams">
           <div class="prematch-team prematch-team-home">
-            <div class="prematch-team-name">バレー部</div>
+            <div class="prematch-team-name">${state.schoolName || 'バレー部'}</div>
             <div class="prematch-team-rep" style="color:${ownRepColor}">${ownRepLabel}</div>
             <div class="prematch-radar-wrap">
               <canvas id="prematch-radar-a"></canvas>
@@ -1364,7 +1364,6 @@ function showOpponentDataModal(opponent, state, matchInfo) {
     <div class="prematch-inner-modal wide-modal">
       <div class="prematch-inner-header">
         <span>${opponent.name} 選手データ</span>
-        <button class="prematch-inner-close" id="btn-opp-back">← 戻る</button>
       </div>
       <div class="modal-scroll-area">
         <table class="roster-table mini">
@@ -1379,9 +1378,12 @@ function showOpponentDataModal(opponent, state, matchInfo) {
           <tbody>${rows}</tbody>
         </table>
       </div>
+      <div class="prematch-inner-footer">
+        <button class="prematch-inner-close" id="btn-opp-back">← 戻る</button>
+      </div>
     </div>
   `;
-  modal.style.display = 'flex'; // 追加: モーダルを確実に表示
+  modal.style.display = 'flex';
   document.getElementById('btn-opp-back').addEventListener('click', () => {
     modal.style.display = 'none';
     modal.innerHTML = '';
@@ -1419,7 +1421,6 @@ function showOrderModal(state, matchInfo) {
     <div class="prematch-inner-modal wide-modal">
       <div class="prematch-inner-header">
         <span>自チーム オーダー確認</span>
-        <button class="prematch-inner-close" id="btn-order-back">← 戻る</button>
       </div>
       <div class="modal-scroll-area">
         <table class="roster-table mini">
@@ -1434,13 +1435,16 @@ function showOrderModal(state, matchInfo) {
           </thead>
           <tbody>${rows}</tbody>
         </table>
+        <div style="font-size:0.75rem; color:#666; padding:8px 12px; text-align:right;">
+          ※スタメン変更はチームメニューから行えます
+        </div>
       </div>
-      <div style="font-size:0.75rem; color:#666; margin-top:10px; text-align:right;">
-        ※スタメン変更はチームメニューから行えます
+      <div class="prematch-inner-footer">
+        <button class="prematch-inner-close" id="btn-order-back">← 戻る</button>
       </div>
     </div>
   `;
-  modal.style.display = 'flex'; // 追加: モーダルを確実に表示
+  modal.style.display = 'flex';
 
   document.getElementById('btn-order-back').addEventListener('click', () => {
     modal.style.display = 'none';
@@ -1523,6 +1527,42 @@ function showMatchResult(result) {
 // ==============================
 // タイトル画面
 // ==============================
+function renderSchoolNameScreen(onConfirm) {
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="login-screen">
+      <div class="login-card">
+        <h1 class="title-logo">🏐 バレー部育成ゲーム</h1>
+        <p class="title-sub">あなたの高校名を入力してください</p>
+        <div class="form-group">
+          <label class="form-label">高校名</label>
+          <input id="input-school-name" type="text" class="form-input"
+            placeholder="例: 桜丘高校" maxlength="20" autocomplete="off">
+        </div>
+        <div class="login-actions">
+          <button id="btn-school-confirm" class="btn-primary btn-large btn-full">決定</button>
+        </div>
+      </div>
+    </div>
+  `;
+  const input = document.getElementById('input-school-name');
+  input.focus();
+
+  const confirm = () => {
+    const name = input.value.trim();
+    if (!name) {
+      input.placeholder = '高校名を入力してください';
+      input.classList.add('input-error');
+      return;
+    }
+    onConfirm(name);
+  };
+
+  document.getElementById('btn-school-confirm').addEventListener('click', confirm);
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') confirm(); });
+  input.addEventListener('input', () => input.classList.remove('input-error'));
+}
+
 async function renderTitleScreen(userId = null) {
   const app = document.getElementById('app');
   // セーブデータ確認中はスピナー表示
@@ -1655,7 +1695,7 @@ function showPracticeResult(results, logs) {
     if (status === 'success') {
       document.getElementById('btn-practice-ok').onclick = () => {
         modal.style.display = 'none';
-        renderAll();
+        switchTabPublic('home');
       };
     } else if (status === 'error') {
       document.getElementById('btn-practice-retry').onclick = async () => {
@@ -1762,11 +1802,14 @@ function renderHomeDashboard(state) {
   });
   bestRecordsHtml += `</div></div>`;
 
-  // ④ 遊び方ボタン
+  // ④ 遊び方・設定ボタン
   const helpButtonHtml = `
     <div class="dash-help-container">
       <button class="btn-help" onclick="window.showHowToPlay()">
         <span class="btn-help-icon">❓</span> 遊び方を確認する
+      </button>
+      <button class="btn-help" onclick="window.showSchoolNameEdit()">
+        <span class="btn-help-icon">✏️</span> チーム名を変更する
       </button>
     </div>
   `;
@@ -1802,6 +1845,52 @@ function renderHomeDashboard(state) {
   // action-footer はクリア
   setActionFooter('');
 }
+
+/**
+ * チーム名変更モーダル
+ */
+window.showSchoolNameEdit = function() {
+  const modal = document.getElementById('modal');
+  const current = G.schoolName || 'バレー部';
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2 style="margin:0 0 16px">✏️ チーム名の変更</h2>
+      <div class="form-group">
+        <label class="form-label">高校名</label>
+        <input id="input-school-name-edit" type="text" class="form-input"
+          value="${current}" maxlength="20" autocomplete="off">
+      </div>
+      <div class="modal-actions" style="margin-top:20px; display:flex; gap:8px; justify-content:flex-end">
+        <button id="btn-school-cancel" class="btn-secondary">キャンセル</button>
+        <button id="btn-school-save" class="btn-primary">保存</button>
+      </div>
+    </div>
+  `;
+  modal.style.display = 'flex';
+
+  const input = document.getElementById('input-school-name-edit');
+  input.focus();
+  input.select();
+
+  document.getElementById('btn-school-cancel').onclick = () => {
+    modal.style.display = 'none';
+  };
+
+  const save = () => {
+    const name = input.value.trim();
+    if (!name) { input.classList.add('input-error'); return; }
+    G.schoolName = name;
+    saveGame(G);
+    modal.style.display = 'none';
+    // ヘッダーのチーム名を即時反映
+    const headerTeam = document.querySelector('.header-team');
+    if (headerTeam) headerTeam.textContent = `🏐 ${name}`;
+  };
+
+  document.getElementById('btn-school-save').onclick = save;
+  input.addEventListener('keydown', e => { if (e.key === 'Enter') save(); });
+  input.addEventListener('input', () => input.classList.remove('input-error'));
+};
 
 /**
  * 遊び方モーダルの表示

@@ -47,6 +47,7 @@ function createDefaultState() {
     },
     gameOver: false,
     titleScreenDone: false,
+    schoolName: '',
   };
 }
 

@@ -2114,33 +2114,69 @@ button {
 /* モーダル内のテーブル表示 */
 .roster-table.mini {
   font-size: 0.75rem;
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed; /* 追加: カラム幅を固定 */
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 380px;
 }
 .roster-table.mini th, .roster-table.mini td {
-  padding: 6px 2px;
+  padding: 6px 4px;
   text-align: center;
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
+  border-bottom: 1px solid #F2F2F7;
 }
-.roster-table.mini th:nth-child(1), 
-.roster-table.mini td:nth-child(1) { width: 32px; } /* POS */
-.roster-table.mini th:nth-child(2), 
-.roster-table.mini td:nth-child(2) { width: auto; text-align: left; } /* 名前 */
-.roster-table.mini th:nth-child(3), 
-.roster-table.mini td:nth-child(3) { width: 34px; } /* OVR または 学年 */
-.roster-table.mini th:nth-child(4), 
-.roster-table.mini td:nth-child(4) { width: 34px; } /* 4列目(相手データ時はOVR) */
+/* 表頭を縦スクロール時に固定 */
+.roster-table.mini thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #F2F2F7;
+}
+/* POS列を横スクロール時に固定 */
+.roster-table.mini th:nth-child(1),
+.roster-table.mini td:nth-child(1) {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
+  min-width: 36px;
+  width: 36px;
+  text-align: center;
+}
+.roster-table.mini thead th:nth-child(1) { z-index: 3; background: #F2F2F7; }
+/* 名前列を横スクロール時に固定 */
+.roster-table.mini th:nth-child(2),
+.roster-table.mini td:nth-child(2) {
+  position: sticky;
+  left: 36px;
+  z-index: 1;
+  background: #fff;
+  text-align: left;
+  min-width: 76px;
+  border-right: 1px solid #D1D1D6;
+}
+.roster-table.mini thead th:nth-child(2) { z-index: 3; background: #F2F2F7; }
+/* スタメン行の固定列は青みがかった背景 */
+.starter-row td:nth-child(1),
+.starter-row td:nth-child(2) { background: #EEF4FF; }
+/* 残りの列幅 */
+.roster-table.mini th:nth-child(n+3),
+.roster-table.mini td:nth-child(n+3) { min-width: 34px; }
 
 .wide-modal {
   max-width: 600px !important;
 }
 .modal-scroll-area {
   flex: 1;
-  overflow-y: auto;
+  overflow: auto;
   background: #fff;
+}
+/* フッター（戻るボタン） */
+.prematch-inner-footer {
+  background: #1C1C1E;
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  display: flex;
+  justify-content: flex-start;
 }
 .opp-ovr {
   color: var(--accent);
@@ -2251,7 +2287,9 @@ button {
 /* 遊び方ボタン */
 .dash-help-container {
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 .btn-help {
   background: #FFFFFF;
