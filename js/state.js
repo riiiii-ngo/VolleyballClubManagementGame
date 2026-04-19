@@ -48,6 +48,7 @@ function createDefaultState() {
     gameOver: false,
     titleScreenDone: false,
     schoolName: '',
+    practiceMatchHistory: [],
   };
 }
 
@@ -190,6 +191,7 @@ function ensureStateFields(state) {
   if (!state.weeklyResults) state.weeklyResults = [];
   if (!state.practiceSelections) state.practiceSelections = {};
   if (!state.pendingScouts) state.pendingScouts = [];
+  if (!state.practiceMatchHistory) state.practiceMatchHistory = [];
   if (!state.bestRecords) {
     state.bestRecords = {
       prefectural:   { round: -1, year: 0, champion: false },

@@ -124,11 +124,12 @@ function startMainGame() {
       <img src="assets/chara_manager.png" class="chara-image" alt="">
     </div>
     <main class="app-main">
-      <div id="tab-home"    class="tab-content active"></div>
-      <div id="tab-action"  class="tab-content"></div>
-      <div id="tab-team"    class="tab-content"></div>
-      <div id="tab-scout"   class="tab-content"></div>
-      <div id="tab-shop"    class="tab-content"></div>
+      <div id="tab-home"           class="tab-content active"></div>
+      <div id="tab-action"         class="tab-content"></div>
+      <div id="tab-team"           class="tab-content"></div>
+      <div id="tab-scout"          class="tab-content"></div>
+      <div id="tab-shop"           class="tab-content"></div>
+      <div id="tab-practice_match" class="tab-content"></div>
     </main>
     <div id="action-footer" class="action-footer" style="display:none"></div>
     <nav class="tab-nav">
@@ -146,6 +147,9 @@ function startMainGame() {
       </button>
       <button class="tab-btn" data-tab="shop">
         <span class="tab-icon">🛒</span><span class="tab-label">ショップ</span>
+      </button>
+      <button class="tab-btn" data-tab="practice_match">
+        <span class="tab-icon">⚔️</span><span class="tab-label">練習試合</span>
       </button>
     </nav>
     <div id="modal" class="modal-overlay" style="display:none"></div>
@@ -202,7 +206,8 @@ function renderTab(tabId) {
     }
     case 'team':     renderTeam(G);     break;
     case 'scout':    renderScout(G);    break;
-    case 'shop':     renderShop(G);     break;
+    case 'shop':           renderShop(G);         break;
+    case 'practice_match': renderPracticeMatch(G); break;
   }
 }
 

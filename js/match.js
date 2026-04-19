@@ -394,7 +394,9 @@ function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
     won,
     score: `${setsA}-${setsB}`,
     setDetail: finalScore,
+    log: allLogs.slice(0, 80),
   });
+  if (state.matchLog.length > 15) state.matchLog.length = 15;
 
   return result;
 }

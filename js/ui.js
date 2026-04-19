@@ -16,6 +16,60 @@ const ROUND_PROGRESS_TEXTS = {
 };
 
 // ==============================
+// 試合ログ共通ユーティリティ
+// ==============================
+
+const SPEED_NORMAL = 60; // ms/行
+const SPEED_FAST   = 10; // ms/行
+
+function buildLogHtml(lines) {
+  return (lines || []).map(line => {
+    if (!line) return '';
+    if (line.startsWith('---') || line.startsWith('==='))
+      return `<div class="log-line-section">${line}</div>`;
+    if (/試合結果|終了/.test(line))
+      return `<div class="log-line-result">${line}</div>`;
+    if (/エース|ブロック！|決まった|強打/.test(line))
+      return `<div class="log-line-highlight">${line}</div>`;
+    return `<div class="log-line-normal">${line}</div>`;
+  }).join('');
+}
+
+// lines を containerEl に msPerLine ms ずつ1行ずつ追加する
+// 戻り値: タイマーID（clearInterval でスキップ可能）
+function playLogStream(lines, containerEl, msPerLine, onDone) {
+  containerEl.innerHTML = '';
+  const validLines = (lines || []).filter(Boolean);
+  if (msPerLine <= 0 || validLines.length === 0) {
+    containerEl.innerHTML = buildLogHtml(lines);
+    onDone && onDone();
+    return null;
+  }
+  let i = 0;
+  const timer = setInterval(() => {
+    if (i >= validLines.length) {
+      clearInterval(timer);
+      onDone && onDone();
+      return;
+    }
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = buildLogHtml([validLines[i++]]);
+    const child = wrapper.firstChild;
+    if (child) containerEl.appendChild(child);
+    containerEl.scrollTop = containerEl.scrollHeight;
+  }, msPerLine);
+  return timer;
+}
+
+// 試合履歴アコーディオンのトグル
+window.toggleMlhItem = function(btn) {
+  const body = btn.nextElementSibling;
+  const isOpen = btn.classList.contains('open');
+  btn.classList.toggle('open', !isOpen);
+  body.style.display = isOpen ? 'none' : 'block';
+};
+
+// ==============================
 // ローディングオーバーレイ
 // ==============================
 function showLoading(msg = '読み込み中...') {
@@ -1461,29 +1515,34 @@ function showMatchResult(result) {
     return;
   }
 
-  const modal      = document.getElementById('modal');
-  const isWin      = result.won;
+  const modal       = document.getElementById('modal');
+  const isWin       = result.won;
   const headerClass = isWin ? 'win-header' : 'lose-header';
-  const setDetail  = result.setResults.map(r => `${r.scoreA}-${r.scoreB}`).join(' / ');
-
-  const logHtml = (result.log || []).map(line => {
-    if (!line) return '';
-    if (line.startsWith('---') || line.startsWith('===')) {
-      return `<div class="log-line-section">${line}</div>`;
-    }
-    const isHighlight = /エース|ブロック！|決まった|強打/.test(line);
-    const isResultLine = /試合結果|終了/.test(line);
-    if (isResultLine)  return `<div class="log-line-result">${line}</div>`;
-    if (isHighlight)   return `<div class="log-line-highlight">${line}</div>`;
-    return `<div class="log-line-normal">${line}</div>`;
-  }).join('');
-
-  const repSign = result.repGain >= 0 ? '+' : '';
-  const repCls  = result.repGain >= 0 ? 'positive' : 'negative';
-  const champHtml = (isWin && state_ref && MATCH_SCHEDULE[state_ref.week] &&
+  const setDetail   = result.setResults.map(r => `${r.scoreA}-${r.scoreB}`).join(' / ');
+  const repSign     = result.repGain >= 0 ? '+' : '';
+  const repCls      = result.repGain >= 0 ? 'positive' : 'negative';
+  const champHtml   = (isWin && state_ref && MATCH_SCHEDULE[state_ref.week] &&
     state_ref.tournaments[MATCH_SCHEDULE[state_ref.week].tournament]?.champion)
     ? `<div class="reward-chip"><div class="reward-chip-label">達成</div><div class="reward-chip-value positive">🏆 優勝！</div></div>`
     : '';
+
+  // 過去の試合履歴アコーディオン（現在の試合＝index 0 を除く）
+  const history = state_ref ? (state_ref.matchLog || []).slice(1) : [];
+  const historyHtml = history.length === 0 ? '' : `
+    <div class="match-log-history">
+      <div class="mlh-title">試合履歴</div>
+      ${history.map(m => `
+        <div class="mlh-item">
+          <button class="mlh-header ${m.won ? 'win' : 'lose'}" onclick="toggleMlhItem(this)">
+            <span>${m.year}年目・${m.name}</span>
+            <span>${m.won ? '勝' : '負'} ${m.score}</span>
+            <span class="mlh-arrow">▼</span>
+          </button>
+          <div class="mlh-body" style="display:none">
+            ${m.log ? buildLogHtml(m.log) : '<div class="log-line-normal">ログなし</div>'}
+          </div>
+        </div>`).join('')}
+    </div>`;
 
   modal.innerHTML = `
     <div class="modal-content" style="padding:0;overflow:hidden">
@@ -1505,22 +1564,49 @@ function showMatchResult(result) {
           </div>` : ''}
           ${champHtml}
         </div>
-        <div class="log-toggle">
-          <button id="btn-log-toggle" class="btn-secondary">試合ログを見る</button>
+        <div class="match-log-stream-controls">
+          <button id="btn-log-skip" class="btn-log-ctrl">⏭ スキップ</button>
+          <button id="btn-log-speed" class="btn-log-ctrl">⚡ はやい</button>
         </div>
-        <div id="match-log-detail" class="match-log-area-v2" style="display:none">${logHtml}</div>
-        <button id="modal-close" class="btn-action-primary" style="margin-top:4px">閉じる</button>
+        <div id="match-log-stream" class="match-log-stream"></div>
+        ${historyHtml}
+        <button id="modal-close" class="btn-action-primary" style="margin-top:12px">閉じる</button>
       </div>
     </div>`;
 
   modal.style.display = 'flex';
+
+  // ストリーミング再生
+  const streamEl = document.getElementById('match-log-stream');
+  const logLines = result.log || [];
+  let currentSpeed = SPEED_NORMAL;
+  let streamTimer = playLogStream(logLines, streamEl, currentSpeed, onStreamDone);
+
+  function onStreamDone() {
+    const skipBtn = document.getElementById('btn-log-skip');
+    if (skipBtn) skipBtn.style.display = 'none';
+  }
+
+  function skipStream() {
+    if (streamTimer) { clearInterval(streamTimer); streamTimer = null; }
+    streamEl.innerHTML = buildLogHtml(logLines);
+    streamEl.scrollTop = streamEl.scrollHeight;
+    onStreamDone();
+  }
+
+  document.getElementById('btn-log-skip').addEventListener('click', skipStream);
+
+  document.getElementById('btn-log-speed').addEventListener('click', function() {
+    currentSpeed = currentSpeed === SPEED_NORMAL ? SPEED_FAST : SPEED_NORMAL;
+    this.textContent = currentSpeed === SPEED_FAST ? '🐢 ふつう' : '⚡ はやい';
+    if (streamTimer) { clearInterval(streamTimer); streamTimer = null; }
+    streamTimer = playLogStream(logLines, streamEl, currentSpeed, onStreamDone);
+  });
+
   document.getElementById('modal-close').addEventListener('click', () => {
+    if (streamTimer) { clearInterval(streamTimer); streamTimer = null; }
     modal.style.display = 'none';
     window.onModalClose();
-  });
-  document.getElementById('btn-log-toggle').addEventListener('click', () => {
-    const d = document.getElementById('match-log-detail');
-    d.style.display = d.style.display === 'none' ? 'block' : 'none';
   });
 }
 

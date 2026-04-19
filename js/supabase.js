@@ -111,6 +111,127 @@ async function deleteSaveFromDB() {
 }
 
 // ==============================
+// 練習試合 DB操作
+// ==============================
+
+async function savePracticeMatch(record) {
+  const userId = await getCurrentUserId();
+  if (!userId) return;
+  const { error } = await _supabase
+    .from('practice_matches')
+    .insert({ user_id: userId, ...record });
+  if (error) throw error;
+}
+
+/** 部屋を作る: 部屋コード付きでプールに待機エントリを挿入 */
+async function createRoom(snapshot) {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('未ログイン');
+
+  // 自分の既存エントリを削除
+  await _supabase.from('online_match_pool')
+    .delete().eq('user_id', userId).eq('matched', false);
+
+  const roomCode = String(Math.floor(100000 + Math.random() * 900000));
+
+  const { data, error } = await _supabase
+    .from('online_match_pool')
+    .insert({
+      user_id:       userId,
+      school_name:   snapshot.school_name,
+      reputation:    snapshot.reputation,
+      team_snapshot: snapshot,
+      room_code:     roomCode,
+    })
+    .select('id').single();
+  if (error) throw error;
+  return { poolEntryId: data.id, roomCode };
+}
+
+/** 部屋を探す: 部屋コードでマッチ成立させる */
+async function joinRoomByCode(code, snapshot) {
+  const userId = await getCurrentUserId();
+  if (!userId) throw new Error('未ログイン');
+
+  // 部屋コードで待機中エントリを検索
+  const { data: host, error: findError } = await _supabase
+    .from('online_match_pool')
+    .select('id, user_id, school_name, team_snapshot')
+    .eq('room_code', code)
+    .eq('matched', false)
+    .neq('user_id', userId)
+    .maybeSingle();
+
+  if (findError) throw findError;
+  if (!host) throw new Error('部屋が見つかりません。部屋番号を確認してください。');
+
+  // マッチ成立: online_matchesにレコードを作成
+  const { data: match, error: matchError } = await _supabase
+    .from('online_matches')
+    .insert({
+      player_a_id: host.user_id,
+      player_b_id: userId,
+      school_a:    host.school_name,
+      school_b:    snapshot.school_name,
+    })
+    .select('id').single();
+  if (matchError) throw matchError;
+
+  // ホスト側のエントリを matched に更新
+  await _supabase.from('online_match_pool')
+    .update({ matched: true, match_id: match.id })
+    .eq('id', host.id);
+
+  // 自分のエントリを matched で挿入
+  const { data: myEntry, error: myError } = await _supabase
+    .from('online_match_pool')
+    .insert({
+      user_id:       userId,
+      school_name:   snapshot.school_name,
+      reputation:    snapshot.reputation,
+      team_snapshot: snapshot,
+      matched:       true,
+      match_id:      match.id,
+    })
+    .select('id').single();
+  if (myError) throw myError;
+
+  return {
+    poolEntryId: myEntry.id,
+    immediateOpponent: {
+      team_snapshot: host.team_snapshot,
+      school_name:   host.school_name,
+    },
+  };
+}
+
+async function pollForMatch(poolEntryId) {
+  const { data, error } = await _supabase
+    .from('online_match_pool')
+    .select('matched, match_id')
+    .eq('id', poolEntryId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function getOnlineOpponentSnapshot(matchId, myUserId) {
+  const { data, error } = await _supabase
+    .from('online_match_pool')
+    .select('team_snapshot, school_name')
+    .eq('match_id', matchId)
+    .neq('user_id', myUserId)
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+async function leaveOnlinePool(poolEntryId) {
+  if (!poolEntryId) return;
+  await _supabase.from('online_match_pool').delete().eq('id', poolEntryId);
+}
+
+// ==============================
 // 認証状態の変更を監視
 // ==============================
 _supabase.auth.onAuthStateChange((event, session) => {
