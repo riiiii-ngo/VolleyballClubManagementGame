@@ -269,9 +269,13 @@ window.onAdvanceWeek = function() {
 window.onStartMatch = function(opponent) {
   const matchInfo = MATCH_SCHEDULE[G.week];
   const result = simulateMatch(G, matchInfo, opponent);
+  if (!result.success) {
+    showAlert(result.msg);
+    return;
+  }
   saveGame(G);
   setStateRef(G);
-  showMatchResult(result);
+  showMatchLog(result, () => showMatchResult(result));
 };
 
 // ==============================
