@@ -103,6 +103,13 @@ function applyLibero(rotation, libero) {
 // ==============================
 function roll(chance) { return Math.random() * 100 < chance; }
 
+function posLabel(position) {
+  if (position === 'Se') return 'S';
+  if (position === 'Li') return 'L';
+  if (position === 'MB') return 'MB';
+  return 'WS';
+}
+
 function serveChance(server) {
   return 40 + server.params.serve * 0.6;
 }
@@ -161,11 +168,11 @@ function simulateRally(rotA, rotB, liberoA, liberoB, servingTeamIsA) {
   // --- サーブ ---
   if (roll(faultChance(server))) {
     logs.push(`${server.name} のサーブがアウト`);
-    return { winner: 'recv', logs };
+    return { winner: 'recv', logs, pointType: 'error', pointPlayer: null };
   }
   if (roll(aceChance(server))) {
     logs.push(`${server.name} のサーブがエース！`);
-    return { winner: 'serv', logs };
+    return { winner: 'serv', logs, pointType: 'serve', pointPlayer: server };
   }
   logs.push(`${server.name} がサーブ`);
 
@@ -178,7 +185,7 @@ function simulateRally(rotA, rotB, liberoA, liberoB, servingTeamIsA) {
 
   if (!roll(receiveChance(receiver, isLiberoReceiving))) {
     logs.push(`${receiver.name} がレシーブ失敗`);
-    return { winner: 'serv', logs };
+    return { winner: 'serv', logs, pointType: 'error', pointPlayer: null };
   }
   logs.push(`${receiver.name} がレシーブ${isLiberoReceiving ? '（リベロ）' : ''}`);
 
@@ -186,7 +193,7 @@ function simulateRally(rotA, rotB, liberoA, liberoB, servingTeamIsA) {
   const setter = recvTeamRot.find(p => p.position === 'Se') || recvTeamRot[0];
   if (!roll(tossChance(setter))) {
     logs.push(`${setter.name} のトスがミス`);
-    return { winner: 'serv', logs };
+    return { winner: 'serv', logs, pointType: 'error', pointPlayer: null };
   }
 
   // --- スパイク ---
@@ -194,7 +201,7 @@ function simulateRally(rotA, rotB, liberoA, liberoB, servingTeamIsA) {
   const validFront = front.filter(p => p.position !== 'Li');
   if (validFront.length === 0) {
     logs.push('スパイクできる選手がいない');
-    return { winner: 'serv', logs };
+    return { winner: 'serv', logs, pointType: 'error', pointPlayer: null };
   }
   const spiker = pickWeighted(validFront, 'spike');
   logs.push(`${setter.name} → ${spiker.name} にトス`);
@@ -205,13 +212,13 @@ function simulateRally(rotA, rotB, liberoA, liberoB, servingTeamIsA) {
   if (servFront.length > 0 && roll(bChance)) {
     const blocker = servFront[Math.floor(Math.random() * servFront.length)];
     logs.push(`${spiker.name} のスパイクを ${blocker.name} がブロック！`);
-    return { winner: 'serv', logs };
+    return { winner: 'serv', logs, pointType: 'block', pointPlayer: blocker };
   }
 
   // --- スパイク成功判定 ---
   if (!roll(spikeChance(spiker))) {
     logs.push(`${spiker.name} のスパイクがアウト`);
-    return { winner: 'serv', logs };
+    return { winner: 'serv', logs, pointType: 'error', pointPlayer: null };
   }
 
   // --- ディグ（相手バックのレシーブ）---
@@ -219,7 +226,7 @@ function simulateRally(rotA, rotB, liberoA, liberoB, servingTeamIsA) {
   const digger = pickWeighted(servBack, 'receive');
   if (!roll(digChance(digger))) {
     logs.push(`${spiker.name} のスパイク決まった！`);
-    return { winner: 'recv', logs };
+    return { winner: 'recv', logs, pointType: 'spike', pointPlayer: spiker };
   }
   logs.push(`${spiker.name} のスパイクを ${digger.name} がディグ`);
 
@@ -229,10 +236,13 @@ function simulateRally(rotA, rotB, liberoA, liberoB, servingTeamIsA) {
   const recvWin = recvPower / (recvPower + servPower + 0.001);
   if (roll(recvWin * 100)) {
     logs.push(`ラリー続く… ${spiker.name} チームが得点`);
-    return { winner: 'recv', logs };
+    return { winner: 'recv', logs, pointType: 'spike', pointPlayer: spiker };
   } else {
+    const counterSpiker = servFront.length > 0
+      ? servFront[Math.floor(Math.random() * servFront.length)]
+      : servTeamRot[0];
     logs.push(`ラリー続く… 相手チームが得点`);
-    return { winner: 'serv', logs };
+    return { winner: 'serv', logs, pointType: 'spike', pointPlayer: counterSpiker };
   }
 }
 
@@ -245,6 +255,7 @@ function simulateSet(rotA, rotB, liberoA, liberoB, targetScore, isFinalSet) {
   let rotAcur = [...rotA];
   let rotBcur = [...rotB];
   const logs = [];
+  const points = [];
   let rallyCount = 0;
 
   while (true) {
@@ -273,11 +284,26 @@ function simulateSet(rotA, rotB, liberoA, liberoB, targetScore, isFinalSet) {
     // セット終了判定
     const target = isFinalSet ? 15 : targetScore;
     const diff = Math.abs(scoreA - scoreB);
-    if ((scoreA >= target || scoreB >= target) && diff >= 2) break;
-    if (rallyCount > 200) break; // 無限ループ防止
+    const setOver = (scoreA >= target || scoreB >= target) && diff >= 2;
+
+    // 構造化ポイントデータ
+    const scorerScore = rallyWonByA ? scoreA : scoreB;
+    const opponentScore = rallyWonByA ? scoreB : scoreA;
+    const isSetPoint = !setOver && scorerScore >= target - 1 && scorerScore > opponentScore;
+    points.push({
+      teamIsA: rallyWonByA,
+      type: result.pointType,
+      player: result.pointPlayer ? result.pointPlayer.name : null,
+      pos: result.pointPlayer ? posLabel(result.pointPlayer.position) : null,
+      scoreA,
+      scoreB,
+      isSetPoint,
+    });
+
+    if (setOver || rallyCount > 200) break;
   }
 
-  return { scoreA, scoreB, logs, winner: scoreA > scoreB ? 'A' : 'B' };
+  return { scoreA, scoreB, logs, winner: scoreA > scoreB ? 'A' : 'B', points };
 }
 
 // ==============================
@@ -314,6 +340,8 @@ function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
   let setsA = 0, setsB = 0;
   const setResults = [];
   const allLogs = [];
+  const pointLog = [];
+  const ownName = state.schoolName || 'バレー部';
 
   allLogs.push(`--- ${matchInfo.name} ---`);
   allLogs.push(`対戦相手 総合力: ${opponent.avgStat}`);
@@ -323,12 +351,29 @@ function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
     setNum++;
     // 第5セットのみ15点マッチ（5セットマッチの場合のみ）
     const isFinalSet = maxSets === 5 && setNum === 5;
+    const setsABeforeSet = setsA;
+    const setsBBeforeSet = setsB;
     const setResult = simulateSet(rotA, rotB, liberoA, liberoB, targetScore, isFinalSet);
 
     if (setResult.winner === 'A') setsA++;
     else setsB++;
 
     setResults.push({ setNum, scoreA: setResult.scoreA, scoreB: setResult.scoreB });
+
+    // 構造化ポイントログ構築
+    setResult.points.forEach(point => {
+      const isScoringTeamA = point.teamIsA;
+      const setsWonByScorer = isScoringTeamA ? setsABeforeSet : setsBBeforeSet;
+      const isMatchPoint = point.isSetPoint && (setsWonByScorer + 1 >= setsToWin);
+      pointLog.push({
+        ...point,
+        setNum,
+        teamName: isScoringTeamA ? ownName : opponent.name,
+        isSetPoint: point.isSetPoint && !isMatchPoint,
+        isMatchPoint,
+      });
+    });
+
     allLogs.push(`\n--- 第${setNum}セット ---`);
     // 詳細ログ（最大20行）
     const logSample = setResult.logs.filter((_, i) => i % Math.max(1, Math.floor(setResult.logs.length / 20)) === 0);
@@ -382,6 +427,8 @@ function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
     repGain,
     shopGain,
     log: allLogs,
+    pointLog,
+    ownName,
     matchName: matchInfo.name,
     opponent,
   };
