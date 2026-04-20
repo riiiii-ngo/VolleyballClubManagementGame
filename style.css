@@ -3427,7 +3427,6 @@ button {
 }
 
 /* ============================================================
-<<<<<<< HEAD
    練習試合タブ (.pm-*)
    ============================================================ */
 
@@ -3809,7 +3808,8 @@ button {
   white-space: nowrap;
 }
 
-=======試合ログ表示（matchlog.js）============================================================*/ .matchlog-screen {
+/* =======試合ログ表示（matchlog.js）============================================================*/
+.matchlog-screen {
   display: flex;
   flex-direction: column;
   height: 100%;
@@ -4031,4 +4031,17 @@ button {
   background: #E5E5EA;
 }
 
->>>>>>>d3edf85481f5047eaef142d0d8900b21ee862676
+/* 試合中：ヘッダー・フッター非表示・フルスクリーン */
+body.match-mode .app-header,
+body.match-mode .tab-nav,
+body.match-mode .game-visual-area,
+body.match-mode #action-footer {
+  display: none !important;
+}
+
+body.match-mode #tab-action.tab-content {
+  display: flex !important;
+  height: 100vh;
+  padding: 0;
+  overflow: hidden;
+}

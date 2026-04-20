@@ -30,8 +30,17 @@ function showMatchLog(result, onComplete) {
   const ownName = result.ownName || 'バレー部';
   const oppName = result.opponent ? result.opponent.name : '相手チーム';
 
-  if (allPoints.length === 0) {
+  document.body.classList.add('match-mode');
+
+  function complete() {
+    el.style.padding = '';
+    el.style.overflow = '';
+    document.body.classList.remove('match-mode');
     onComplete();
+  }
+
+  if (allPoints.length === 0) {
+    complete();
     return;
   }
 
@@ -147,12 +156,8 @@ function showMatchLog(result, onComplete) {
 
   function advance() {
     if (pointIdx >= allPoints.length) {
-      // 試合終了 → 少し待ってから結果画面へ
-      timerId = setTimeout(() => {
-        el.style.padding = '';
-        el.style.overflow = '';
-        onComplete();
-      }, 1000);
+      // 試合終了 → 少し待ってから次へ
+      timerId = setTimeout(complete, 1000);
       return;
     }
 
@@ -217,11 +222,7 @@ function showMatchLog(result, onComplete) {
     if (pointIdx >= allPoints.length) {
       // 試合終了
       showSetEnd(currentSetNum);
-      timerId = setTimeout(() => {
-        el.style.padding = '';
-        el.style.overflow = '';
-        onComplete();
-      }, 900);
+      timerId = setTimeout(complete, 900);
       return;
     }
 
@@ -240,9 +241,7 @@ function showMatchLog(result, onComplete) {
 
   document.getElementById('ml-btn-skip-match').addEventListener('click', () => {
     clearTimeout(timerId);
-    el.style.padding = '';
-    el.style.overflow = '';
-    onComplete();
+    complete();
   });
 
   // スタート

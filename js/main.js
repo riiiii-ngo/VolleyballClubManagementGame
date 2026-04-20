@@ -280,7 +280,9 @@ window.onStartMatch = function(opponent) {
   }
   saveGame(G);
   setStateRef(G);
-  showMatchLog(result, () => showMatchResult(result));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'action'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-action'));
+  showMatchLog(result, () => onModalClose());
 };
 
 // ==============================
