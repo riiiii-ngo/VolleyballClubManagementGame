@@ -154,10 +154,42 @@ function showMatchLog(result, onComplete) {
     if (scoreBEl && sr) scoreBEl.textContent = sr.scoreB;
   }
 
+  function showResult() {
+    clearTimeout(timerId);
+    const isWin = result.won;
+    const setDetail = (result.setResults || []).map(r => `${r.scoreA}-${r.scoreB}`).join(' / ');
+    const hasRewards = result.repGain !== 0 || result.shopGain > 0;
+    const repSign = (result.repGain || 0) >= 0 ? '+' : '';
+    const repCls = (result.repGain || 0) >= 0 ? 'positive' : 'negative';
+
+    const rewardsHtml = hasRewards
+      ? `${result.repGain !== 0 ? `<div class="matchresult-chip">評判P <span class="${repCls}">${repSign}${result.repGain}</span></div>` : ''}
+         ${result.shopGain ? `<div class="matchresult-chip">ショップP <span class="positive">+${result.shopGain}</span></div>` : ''}`
+      : `<div class="matchresult-chip">評判変化なし</div>`;
+
+    el.style.padding = '0';
+    el.style.overflow = 'hidden';
+    el.innerHTML = `
+      <div class="matchresult-inline ${isWin ? 'win' : 'lose'}">
+        <div class="matchresult-top">
+          <div class="matchresult-name">${result.matchName || '試合'}</div>
+          <div class="matchresult-verdict">${isWin ? '勝利' : '敗戦'}</div>
+          <div class="matchresult-score">${result.setsA} - ${result.setsB}</div>
+          <div class="matchresult-setdetail">${setDetail}</div>
+        </div>
+        <div class="matchresult-rewards">${rewardsHtml}</div>
+        <div class="matchresult-footer">
+          <button id="ml-result-close" class="btn-matchresult-close">閉じる</button>
+        </div>
+      </div>`;
+
+    document.getElementById('ml-result-close').addEventListener('click', complete);
+  }
+
   function advance() {
     if (pointIdx >= allPoints.length) {
-      // 試合終了 → 少し待ってから次へ
-      timerId = setTimeout(complete, 1000);
+      // 試合終了 → 少し待ってから結果画面へ
+      timerId = setTimeout(showResult, 1000);
       return;
     }
 
@@ -222,7 +254,7 @@ function showMatchLog(result, onComplete) {
     if (pointIdx >= allPoints.length) {
       // 試合終了
       showSetEnd(currentSetNum);
-      timerId = setTimeout(complete, 900);
+      timerId = setTimeout(showResult, 900);
       return;
     }
 
@@ -240,8 +272,7 @@ function showMatchLog(result, onComplete) {
   });
 
   document.getElementById('ml-btn-skip-match').addEventListener('click', () => {
-    clearTimeout(timerId);
-    complete();
+    showResult();
   });
 
   // スタート

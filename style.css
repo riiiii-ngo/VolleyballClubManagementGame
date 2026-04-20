@@ -3822,6 +3822,7 @@ button {
   background: linear-gradient(135deg, #1B3A5C 0%, #2A5F8F 100%);
   color: #fff;
   padding: 10px 16px 12px;
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
   text-align: center;
   flex-shrink: 0;
 }
@@ -4041,7 +4042,119 @@ body.match-mode #action-footer {
 
 body.match-mode #tab-action.tab-content {
   display: flex !important;
-  height: 100vh;
+  height: 100dvh;
   padding: 0;
   overflow: hidden;
+}
+
+/* ── 試合結果インライン画面 ── */
+.matchresult-inline {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+}
+
+.matchresult-inline.win {
+  background: linear-gradient(160deg, #1B3A5C 0%, #2A5F8F 55%, #1565C0 100%);
+}
+
+.matchresult-inline.lose {
+  background: linear-gradient(160deg, #5C1B1B 0%, #8F2A2A 55%, #C62828 100%);
+}
+
+.matchresult-top {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: calc(24px + env(safe-area-inset-top, 0px)) 24px 24px;
+  color: #fff;
+  text-align: center;
+}
+
+.matchresult-name {
+  font-size: 0.85rem;
+  font-weight: 700;
+  opacity: 0.75;
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+}
+
+.matchresult-verdict {
+  font-size: 3.2rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  margin-bottom: 20px;
+  text-shadow: 0 2px 16px rgba(0, 0, 0, 0.35);
+}
+
+.matchresult-score {
+  font-size: 2.6rem;
+  font-weight: 900;
+  letter-spacing: 0.12em;
+  margin-bottom: 10px;
+  opacity: 0.95;
+}
+
+.matchresult-setdetail {
+  font-size: 0.9rem;
+  font-weight: 600;
+  opacity: 0.7;
+  letter-spacing: 0.04em;
+}
+
+.matchresult-rewards {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 16px 24px;
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.matchresult-chip {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 99px;
+  padding: 6px 16px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.85);
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.matchresult-chip .positive {
+  color: #A5D6A7;
+}
+
+.matchresult-chip .negative {
+  color: #EF9A9A;
+}
+
+.matchresult-footer {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 16px 24px;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+.btn-matchresult-close {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  letter-spacing: 0.04em;
+  transition: background 0.15s;
+}
+
+.btn-matchresult-close:active {
+  background: rgba(255, 255, 255, 0.25);
 }
