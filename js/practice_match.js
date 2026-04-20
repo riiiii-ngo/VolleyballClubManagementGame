@@ -663,18 +663,35 @@ function simulatePracticeMatch(state, opponent) {
   const liberoA = starters.Li || null;
   const rotB    = opponent.players.filter(p => p.position !== 'Li');
   const liberoB = opponent.players.find(p => p.position === 'Li') || null;
+  const ownName = state.schoolName || 'バレー部';
 
   const setsToWin = 2;
   let setsA = 0, setsB = 0;
   const setResults = [];
   const allLogs = ['--- 練習試合 ---', `対戦相手: ${opponent.name}（総合力 ${opponent.avgStat}）`];
+  const pointLog = [];
 
   let setNum = 0;
   while (setsA < setsToWin && setsB < setsToWin) {
     setNum++;
+    const setsABeforeSet = setsA;
+    const setsBBeforeSet = setsB;
     const setResult = simulateSet(rotA, rotB, liberoA, liberoB, 25, false);
     if (setResult.winner === 'A') setsA++; else setsB++;
     setResults.push({ setNum, scoreA: setResult.scoreA, scoreB: setResult.scoreB });
+
+    setResult.points.forEach(point => {
+      const isScoringTeamA = point.teamIsA;
+      const setsWonByScorer = isScoringTeamA ? setsABeforeSet : setsBBeforeSet;
+      const isMatchPoint = point.isSetPoint && (setsWonByScorer + 1 >= setsToWin);
+      pointLog.push({
+        ...point,
+        setNum,
+        teamName: isScoringTeamA ? ownName : opponent.name,
+        isSetPoint: point.isSetPoint && !isMatchPoint,
+        isMatchPoint,
+      });
+    });
 
     allLogs.push(`\n--- 第${setNum}セット ---`);
     const sample = setResult.logs.filter(
@@ -694,7 +711,7 @@ function simulatePracticeMatch(state, opponent) {
 
   return {
     success: true, won, setsA, setsB, setResults,
-    finalScore, log: allLogs,
+    finalScore, log: allLogs, pointLog, ownName,
     matchName: '練習試合', opponent,
     repGain: 0, shopGain: 0,
   };
@@ -735,83 +752,9 @@ function startPracticeMatch(state, opponent, matchType) {
   });
   if (state.practiceMatchHistory.length > 15) state.practiceMatchHistory.length = 15;
 
-  showPracticeMatchResult(result, state);
-}
-
-// ============================================================
-// 試合結果モーダル（fast固定・スピード切替なし）
-// ============================================================
-function showPracticeMatchResult(result, state) {
-  const modal       = document.getElementById('modal');
-  const isWin       = result.won;
-  const headerClass = isWin ? 'win-header' : 'lose-header';
-  const setDetail   = result.setResults.map(r => `${r.scoreA}-${r.scoreB}`).join(' / ');
-  const logLines    = result.log || [];
-
-  // 過去の練習試合履歴アコーディオン（index 0 = 今回 を除く）
-  const history = (state && state.practiceMatchHistory || []).slice(1);
-  const historyHtml = history.length === 0 ? '' : `
-    <div class="match-log-history">
-      <div class="mlh-title">練習試合履歴</div>
-      ${history.map(m => `
-        <div class="mlh-item">
-          <button class="mlh-header ${m.won ? 'win' : 'lose'}" onclick="toggleMlhItem(this)">
-            <span>vs ${m.opponent}</span>
-            <span>${m.won ? '勝' : '負'} ${m.score}</span>
-            <span class="mlh-arrow">▼</span>
-          </button>
-          <div class="mlh-body" style="display:none">
-            ${m.log ? buildLogHtml(m.log) : '<div class="log-line-normal">ログなし</div>'}
-          </div>
-        </div>`).join('')}
-    </div>`;
-
-  modal.innerHTML = `
-    <div class="modal-content" style="padding:0;overflow:hidden">
-      <div class="match-result-header ${headerClass}">
-        <div class="mrhv-name">${result.matchName}</div>
-        <div class="mrhv-verdict">${isWin ? '勝利' : '敗戦'}</div>
-        <div class="mrhv-score">${result.setsA} - ${result.setsB}</div>
-        <div class="mrhv-sets">${setDetail}</div>
-      </div>
-      <div class="match-result-body">
-        <div class="match-rewards-row">
-          <div class="reward-chip">
-            <div class="reward-chip-label">練習試合</div>
-            <div class="reward-chip-value" style="color:var(--text2)">評判変化なし</div>
-          </div>
-        </div>
-        <div class="match-log-stream-controls">
-          <button id="pm-btn-skip" class="btn-log-ctrl">⏭ スキップ</button>
-        </div>
-        <div id="pm-log-stream" class="match-log-stream"></div>
-        ${historyHtml}
-        <button id="pm-modal-close" class="btn-action-primary" style="margin-top:12px">閉じる</button>
-      </div>
-    </div>`;
-
-  modal.style.display = 'flex';
-
-  // はやい固定でストリーミング再生
-  const streamEl = document.getElementById('pm-log-stream');
-  let streamTimer = playLogStream(logLines, streamEl, SPEED_FAST, () => {
-    const skipBtn = document.getElementById('pm-btn-skip');
-    if (skipBtn) skipBtn.style.display = 'none';
-  });
-
-  document.getElementById('pm-btn-skip').addEventListener('click', () => {
-    if (streamTimer) { clearInterval(streamTimer); streamTimer = null; }
-    streamEl.innerHTML = buildLogHtml(logLines);
-    streamEl.scrollTop = streamEl.scrollHeight;
-    const skipBtn = document.getElementById('pm-btn-skip');
-    if (skipBtn) skipBtn.style.display = 'none';
-  });
-
-  document.getElementById('pm-modal-close').addEventListener('click', () => {
-    if (streamTimer) { clearInterval(streamTimer); streamTimer = null; }
-    modal.style.display = 'none';
-    returnToPracticeMatchTop();
-  });
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === 'action'));
+  document.querySelectorAll('.tab-content').forEach(c => c.classList.toggle('active', c.id === 'tab-action'));
+  showMatchLog(result, () => returnToPracticeMatchTop());
 }
 
 // ============================================================
