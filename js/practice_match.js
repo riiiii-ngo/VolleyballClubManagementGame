@@ -710,10 +710,21 @@ function simulatePracticeMatch(state, opponent) {
   if (liberoA) consumeMatchStamina(liberoA, Math.ceil(setNum / 2));
 
   return {
-    success: true, won, setsA, setsB, setResults,
+    success: true,
+    matchType: 'practice',
+    won,
+    winner: won ? ownName : opponent.name,
+    teamA: ownName,
+    teamB: opponent.name,
+    setsA, setsB, setResults,
+    sets: setResults.map(sr => ({
+      set: sr.setNum,
+      logs: pointLog.filter(p => p.setNum === sr.setNum),
+    })),
     finalScore, log: allLogs, pointLog, ownName,
     matchName: '練習試合', opponent,
     repGain: 0, shopGain: 0,
+    growth: [],
   };
 }
 

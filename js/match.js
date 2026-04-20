@@ -403,6 +403,11 @@ function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
   rotA.forEach(p => consumeMatchStamina(p, setNum));
   if (liberoA) consumeMatchStamina(liberoA, setNum);
 
+  // 試合成長（通常試合のみ）
+  const allPlayersA = rotA.filter(Boolean);
+  if (liberoA) allPlayersA.push(liberoA);
+  const growth = calculateMatchGrowth(allPlayersA, pointLog);
+
   // トーナメント状態更新
   const tState = state.tournaments[matchInfo.tournament];
   if (won) {
@@ -420,14 +425,23 @@ function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
 
   const result = {
     success: true,
+    matchType: 'normal',
     won,
+    winner: won ? ownName : opponent.name,
+    teamA: ownName,
+    teamB: opponent.name,
     setsA, setsB,
     setResults,
+    sets: setResults.map(sr => ({
+      set: sr.setNum,
+      logs: pointLog.filter(p => p.setNum === sr.setNum),
+    })),
     finalScore,
     repGain,
     shopGain,
     log: allLogs,
     pointLog,
+    growth,
     ownName,
     matchName: matchInfo.name,
     opponent,
@@ -446,6 +460,39 @@ function simulateMatch(state, matchInfo, preGeneratedOpponent = null) {
   if (state.matchLog.length > 15) state.matchLog.length = 15;
 
   return result;
+}
+
+// ==============================
+// 試合成長計算（通常試合のみ）
+// ==============================
+function calculateMatchGrowth(players, pointLog) {
+  const THRESHOLDS = { spike: 5, block: 3, serve: 2 };
+  const actionCounts = {};
+
+  pointLog.forEach(pt => {
+    if (!pt.teamIsA || !THRESHOLDS.hasOwnProperty(pt.type)) return;
+    if (!actionCounts[pt.player]) actionCounts[pt.player] = {};
+    actionCounts[pt.player][pt.type] = (actionCounts[pt.player][pt.type] || 0) + 1;
+  });
+
+  const growth = [];
+  players.forEach(player => {
+    const counts = actionCounts[player.name] || {};
+    const stats = {};
+    Object.entries(THRESHOLDS).forEach(([stat, threshold]) => {
+      const count = counts[stat] || 0;
+      const gain = Math.min(2, Math.floor(count / threshold));
+      if (gain > 0) {
+        stats[stat] = gain;
+        player.params[stat] = Math.min(120, (player.params[stat] || 0) + gain);
+      }
+    });
+    if (Object.keys(stats).length > 0) {
+      growth.push({ name: player.name, stats });
+    }
+  });
+
+  return growth;
 }
 
 // 対戦相手の推定評判（ポイント計算用）
