@@ -157,34 +157,119 @@ function showMatchLog(result, onComplete) {
   function showResult() {
     clearTimeout(timerId);
     const isWin = result.won;
+    const ownName = result.ownName || 'バレー部';
+    const oppName = result.opponent ? result.opponent.name : '相手チーム';
     const setDetail = (result.setResults || []).map(r => `${r.scoreA}-${r.scoreB}`).join(' / ');
-    const hasRewards = result.repGain !== 0 || result.shopGain > 0;
-    const repSign = (result.repGain || 0) >= 0 ? '+' : '';
-    const repCls = (result.repGain || 0) >= 0 ? 'positive' : 'negative';
+    const sets = result.sets || [];
+    const growth = result.growth || [];
+    const isPractice = result.matchType === 'practice';
+    const lastSetNum = sets.length > 0 ? sets[sets.length - 1].set : 1;
 
-    const rewardsHtml = hasRewards
-      ? `${result.repGain !== 0 ? `<div class="matchresult-chip">評判P <span class="${repCls}">${repSign}${result.repGain}</span></div>` : ''}
-         ${result.shopGain ? `<div class="matchresult-chip">ショップP <span class="positive">+${result.shopGain}</span></div>` : ''}`
-      : `<div class="matchresult-chip">評判変化なし</div>`;
+    // セットタブ
+    const setTabsHtml = sets.map(s =>
+      `<button class="mr-set-tab${s.set === lastSetNum ? ' active' : ''}"
+        onclick="mrShowSet(${s.set})" data-set="${s.set}">
+        第${s.set}セット
+      </button>`
+    ).join('');
+
+    // 報酬行（通常試合のみ）
+    let rewardsHtml = '';
+    if (!isPractice) {
+      const repSign = (result.repGain || 0) >= 0 ? '+' : '';
+      const repCls  = (result.repGain || 0) >= 0 ? 'positive' : 'negative';
+      rewardsHtml = `
+        <div class="mr-rewards">
+          ${result.repGain !== 0
+            ? `<div class="matchresult-chip">評判P <span class="${repCls}">${repSign}${result.repGain}</span></div>`
+            : ''}
+          ${result.shopGain
+            ? `<div class="matchresult-chip">ショップP <span class="positive">+${result.shopGain}</span></div>`
+            : ''}
+        </div>`;
+    }
+
+    // 成長セクション（通常試合かつ成長あり）
+    let growthHtml = '';
+    if (!isPractice && growth.length > 0) {
+      const items = growth.map(g => {
+        const statsHtml = Object.entries(g.stats)
+          .map(([k, v]) => `<span class="mr-growth-stat">${PARAM_NAMES[k] || k} +${v}</span>`)
+          .join('');
+        return `
+          <div class="mr-growth-player">
+            <div class="mr-growth-name">${g.name}</div>
+            <div class="mr-growth-stats">${statsHtml}</div>
+          </div>`;
+      }).join('');
+      growthHtml = `
+        <div class="mr-section">
+          <div class="mr-section-title">選手の成長</div>
+          <div class="mr-growth-list">${items}</div>
+        </div>`;
+    }
 
     el.style.padding = '0';
     el.style.overflow = 'hidden';
     el.innerHTML = `
-      <div class="matchresult-inline ${isWin ? 'win' : 'lose'}">
-        <div class="matchresult-top">
-          <div class="matchresult-name">${result.matchName || '試合'}</div>
-          <div class="matchresult-verdict">${isWin ? '勝利' : '敗戦'}</div>
-          <div class="matchresult-score">${result.setsA} - ${result.setsB}</div>
-          <div class="matchresult-setdetail">${setDetail}</div>
+      <div class="mr-screen">
+        <div class="mr-body">
+          <div class="mr-header ${isWin ? 'win' : 'lose'}">
+            <div class="mr-match-name">${result.matchName || '試合'}</div>
+            <div class="mr-verdict">${isWin ? '勝利' : '敗北'}</div>
+            <div class="mr-score-row">
+              <span class="mr-team-name">${ownName}</span>
+              <span class="mr-sets">${result.setsA} - ${result.setsB}</span>
+              <span class="mr-team-name">${oppName}</span>
+            </div>
+            <div class="mr-set-scores">${setDetail}</div>
+          </div>
+          ${rewardsHtml}
+          <div class="mr-section">
+            <div class="mr-set-tabs" id="mr-set-tabs">${setTabsHtml}</div>
+            <div class="mr-log-area" id="mr-log-area"></div>
+          </div>
+          ${growthHtml}
         </div>
-        <div class="matchresult-rewards">${rewardsHtml}</div>
-        <div class="matchresult-footer">
-          <button id="ml-result-close" class="btn-matchresult-close">閉じる</button>
+        <div class="mr-footer">
+          <button class="mr-next-btn" id="mr-next-btn">次へ</button>
         </div>
       </div>`;
 
-    document.getElementById('ml-result-close').addEventListener('click', complete);
+    window._mrSets = sets;
+    mrShowSet(lastSetNum);
+    document.getElementById('mr-next-btn').addEventListener('click', complete);
   }
+
+  window.mrShowSet = function(setNum) {
+    document.querySelectorAll('.mr-set-tab').forEach(t =>
+      t.classList.toggle('active', parseInt(t.dataset.set) === setNum)
+    );
+    const logArea = document.getElementById('mr-log-area');
+    if (!logArea) return;
+    const setData = (window._mrSets || []).find(s => s.set === setNum);
+    if (!setData || setData.logs.length === 0) {
+      logArea.innerHTML = '<div class="mr-no-log">ログなし</div>';
+      return;
+    }
+    logArea.innerHTML = setData.logs.map(point => {
+      const [, detail, suffix] = generateLog(point);
+      const headerText = `${point.teamName} 得点！（${point.scoreA} - ${point.scoreB}）`;
+      const teamClass = point.teamIsA ? 'team-a' : 'team-b';
+      const spClass   = point.isSetPoint   ? 'is-set-point'   : '';
+      const mpClass   = point.isMatchPoint ? 'is-match-point' : '';
+      const sufClass  = point.isMatchPoint ? 'is-match-point' : point.isSetPoint ? 'is-set-point' : '';
+      return `
+        <div class="matchlog-point-card ${teamClass} ${spClass} ${mpClass}">
+          <div class="matchlog-point-header-line">
+            <span class="matchlog-header-text">${headerText}</span>
+            ${suffix ? `<span class="matchlog-suffix ${sufClass}">${suffix}</span>` : ''}
+          </div>
+          <div class="matchlog-point-detail">${detail}</div>
+        </div>`;
+    }).join('');
+    logArea.scrollTop = 0;
+  };
 
   function advance() {
     if (pointIdx >= allPoints.length) {
