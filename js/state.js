@@ -129,6 +129,24 @@ function migrateState(state) {
     };
   }
   
+  // 現在体力・総体力の分離移行
+  // 旧形式: maxStamina(固定100前後) + params.stamina(currentStaminaと同期)
+  // 新形式: params.stamina=総体力(最大値), currentStamina=現在体力
+  if (state.players) {
+    state.players.forEach(p => {
+      if (p.maxStamina !== undefined) {
+        p.params.stamina = p.maxStamina;
+        delete p.maxStamina;
+        p.currentStamina = Math.min(p.currentStamina, p.params.stamina);
+      } else if (p.params && p.params.stamina !== undefined && p.currentStamina !== undefined) {
+        // params.staminaがcurrentStaminaと同値（旧同期形式）の場合は100に補正
+        if (Math.abs(p.params.stamina - p.currentStamina) < 1) {
+          p.params.stamina = 100;
+        }
+      }
+    });
+  }
+
   // その他の将来的なフィールド追加にも対応しやすいように
   return state;
 }
@@ -301,19 +319,19 @@ function useItem(state, itemIndex) {
   switch (itemDef.effect) {
     case 'stamina_small':
       state.players.forEach(p => {
-        p.currentStamina = Math.min(p.maxStamina, p.currentStamina + STAMINA_RECOVERY.stamina_small);
+        p.currentStamina = Math.min(p.params.stamina, p.currentStamina + STAMINA_RECOVERY.stamina_small);
       });
       msg = `${itemDef.name}を使用。スタミナが少し回復した。`;
       break;
     case 'stamina_medium':
       state.players.forEach(p => {
-        p.currentStamina = Math.min(p.maxStamina, p.currentStamina + STAMINA_RECOVERY.stamina_medium);
+        p.currentStamina = Math.min(p.params.stamina, p.currentStamina + STAMINA_RECOVERY.stamina_medium);
       });
       msg = `${itemDef.name}を使用。スタミナが回復した。`;
       break;
     case 'stamina_all':
       state.players.forEach(p => {
-        p.currentStamina = Math.min(p.maxStamina, p.currentStamina + STAMINA_RECOVERY.stamina_all);
+        p.currentStamina = Math.min(p.params.stamina, p.currentStamina + STAMINA_RECOVERY.stamina_all);
       });
       msg = `${itemDef.name}を使用。全員のスタミナが回復した。`;
       break;

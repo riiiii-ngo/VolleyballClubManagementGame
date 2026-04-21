@@ -619,8 +619,7 @@ function buildOpponentFromEnemyTeam(team) {
       serve: p.serve, toss: p.toss, power: p.power,
       speed: p.speed, technique: p.technique, stamina: p.stamina,
     },
-    currentStamina: 90,
-    maxStamina: 100,
+    currentStamina: p.stamina,
     isAllRounder: false,
     grade: 2,
   }));
@@ -634,8 +633,7 @@ function buildOpponentFromSnapshot(snapshot, schoolName) {
     name:       p.name || `選手${i + 1}`,
     position:   p.position || 'OH',
     params:     { ...p.params },
-    currentStamina: p.currentStamina || 80,
-    maxStamina:     p.maxStamina     || 100,
+    currentStamina: p.currentStamina || (p.params && p.params.stamina) || 80,
     isAllRounder:   p.isAllRounder   || false,
     grade:          p.grade          || 2,
   }));

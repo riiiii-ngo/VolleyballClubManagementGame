@@ -74,15 +74,15 @@ function executePractice(state) {
       }
       
       if (isResting) {
-        // 休憩中：成長なし、スタミナ回復(+20)
-        player.currentStamina = Math.min(player.maxStamina, player.currentStamina + 20);
-        player.params.stamina = player.currentStamina;
+        // 休憩中：成長なし、現在体力回復(+20、総体力上限)
+        player.currentStamina = Math.min(player.params.stamina, player.currentStamina + 20);
       } else {
         // 練習参加：通常通り成長とスタミナ消費
         applyParamGrowth(player, menu.params, baseGrowth, efficiency);
 
         if (menu.params.includes('stamina')) {
-          player.maxStamina = Math.min(100, player.maxStamina + 0.3);
+          // スタミナ練習で総体力が増加
+          player.params.stamina = Math.min(150, player.params.stamina + 0.3);
         }
         consumeStamina(player, menu.staminaCost);
       }
@@ -114,8 +114,7 @@ function executePractice(state) {
   // スタミナ自然回復
   state.players.forEach(p => {
     if (p.isInjured) {
-      p.currentStamina = Math.min(p.maxStamina, p.currentStamina + 4);
-      p.params.stamina = p.currentStamina;
+      p.currentStamina = Math.min(p.params.stamina, p.currentStamina + 4);
     } else {
       recoverStaminaWeekly(p);
     }
@@ -130,7 +129,6 @@ function executePractice(state) {
 function executeRestWeek(state) {
   state.players.forEach(p => {
     // 試合週は回復多め
-    p.currentStamina = Math.min(p.maxStamina, p.currentStamina + 5);
-    p.params.stamina = p.currentStamina;
+    p.currentStamina = Math.min(p.params.stamina, p.currentStamina + 5);
   });
 }
