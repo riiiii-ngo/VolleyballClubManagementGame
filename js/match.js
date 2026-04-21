@@ -52,8 +52,7 @@ function generateOpponent(tournament, round, year, reputation) {
       technique: p.technique,
       stamina: p.stamina,
     },
-    currentStamina: 90,
-    maxStamina: 100,
+    currentStamina: p.stamina,
     isAllRounder: false,
     grade: 2,
   }));
@@ -116,20 +115,23 @@ function serveChance(server) {
 function aceChance(server) {
   return server.params.serve * 0.12;
 }
+function staminaRatio(player) {
+  return player.params.stamina > 0 ? player.currentStamina / player.params.stamina : 0;
+}
 function faultChance(server) {
-  const staminaMod = server.currentStamina < 10 ? 1.5 : 1;
+  const staminaMod = staminaRatio(server) < 0.10 ? 1.5 : 1;
   return Math.max(2, 15 - server.params.serve * 0.1) * staminaMod;
 }
 function receiveChance(receiver, isLibero = false) {
   const bonus = isLibero ? 15 : 0;
-  const staminaMod = receiver.currentStamina < 10 ? 0.7 : 1;
+  const staminaMod = staminaRatio(receiver) < 0.10 ? 0.7 : 1;
   return (30 + receiver.params.receive * 0.7 + bonus) * staminaMod;
 }
 function tossChance(setter) {
   return 30 + setter.params.toss * 0.7;
 }
 function spikeChance(spiker) {
-  const staminaMod = spiker.currentStamina < 10 ? 0.7 : 1;
+  const staminaMod = staminaRatio(spiker) < 0.10 ? 0.7 : 1;
   return (20 + spiker.params.spike * 0.8) * staminaMod;
 }
 function blockChance(blockers, spiker) {
@@ -138,7 +140,7 @@ function blockChance(blockers, spiker) {
   return Math.max(0, avgBlock * 0.4 + numBonus - spiker.params.spike * 0.15);
 }
 function digChance(digger) {
-  const staminaMod = digger.currentStamina < 10 ? 0.7 : 1;
+  const staminaMod = staminaRatio(digger) < 0.10 ? 0.7 : 1;
   return (15 + digger.params.receive * 0.5) * staminaMod;
 }
 

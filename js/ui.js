@@ -210,9 +210,10 @@ function updateStatusBar(state) {
 
   const avgEl = document.getElementById('ui-team-stamina');
   if (avgEl && state.players.length > 0) {
-    const avg = Math.round(state.players.reduce((s, p) => s + p.currentStamina, 0) / state.players.length);
-    const sts = staminaStatus(avg);
-    avgEl.innerHTML = `<span style="color:${sts.color}">${avg}</span>`;
+    const avgCurrent = Math.round(state.players.reduce((s, p) => s + p.currentStamina, 0) / state.players.length);
+    const avgTotal   = Math.round(state.players.reduce((s, p) => s + p.params.stamina, 0) / state.players.length);
+    const sts = staminaStatus(avgCurrent, avgTotal);
+    avgEl.innerHTML = `<span style="color:${sts.color}">${avgCurrent}/${avgTotal}</span>`;
   }
 
   // フッタータブのラベルを動的に変更 (練習/試合タブ)
@@ -380,7 +381,7 @@ function renderHome(state) {
   }
 
   // スタミナ警告
-  const lowStamina = state.players.filter(p => p.currentStamina < 20);
+  const lowStamina = state.players.filter(p => p.params.stamina > 0 && p.currentStamina / p.params.stamina < 0.20);
   let staminaWarnHtml = '';
   if (lowStamina.length > 0) {
     staminaWarnHtml = `
@@ -391,19 +392,23 @@ function renderHome(state) {
   }
 
   // チーム平均スタミナバー
-  const teamAvgStamina = state.players.length > 0
+  const teamAvgCurrent = state.players.length > 0
     ? Math.round(state.players.reduce((s, p) => s + p.currentStamina, 0) / state.players.length)
     : 0;
-  const sts0 = staminaStatus(teamAvgStamina);
+  const teamAvgTotal = state.players.length > 0
+    ? Math.round(state.players.reduce((s, p) => s + p.params.stamina, 0) / state.players.length)
+    : 100;
+  const teamStaminaPct = teamAvgTotal > 0 ? Math.round((teamAvgCurrent / teamAvgTotal) * 100) : 0;
+  const sts0 = staminaStatus(teamAvgCurrent, teamAvgTotal);
   const teamStaminaHtml = `
     <div class="situation-card" style="padding:12px 16px">
       <div class="situation-title">チーム体力</div>
       <div class="team-stamina-overview">
         <div class="tso-label">平均</div>
         <div class="tso-bar-track">
-          <div class="tso-bar-fill" style="width:${teamAvgStamina}%;background:${sts0.color}"></div>
+          <div class="tso-bar-fill" style="width:${teamStaminaPct}%;background:${sts0.color}"></div>
         </div>
-        <div class="tso-value" style="color:${sts0.color}">${teamAvgStamina}</div>
+        <div class="tso-value" style="color:${sts0.color}">${teamAvgCurrent}/${teamAvgTotal}</div>
       </div>
     </div>`;
 
@@ -629,7 +634,7 @@ function renderPlayerList(state) {
   state.players
     .sort((a, b) => b.grade - a.grade || playerOverall(b) - playerOverall(a))
     .forEach(p => {
-      const sts = staminaStatus(p.currentStamina);
+      const sts = staminaStatus(p.currentStamina, p.params.stamina);
       const isStarter = Object.values(state.starters).includes(p.id);
       const pGroup = playerGroups[p.id] !== undefined ? playerGroups[p.id] : -1;
       
@@ -655,7 +660,7 @@ function renderPlayerList(state) {
         <td>${renderStatList(p.params.power)}</td>
         <td>${renderStatList(p.params.speed)}</td>
         <td>${renderStatList(p.params.technique)}</td>
-        <td><span style="color:${sts.color}">${Math.round(p.currentStamina)}</span></td>
+        <td><span style="color:${sts.color}">${Math.round(p.currentStamina)}/${Math.round(p.params.stamina)}</span></td>
       </tr>`;
     });
 
@@ -746,8 +751,8 @@ function showPlayerDetail(player) {
     </div>`;
   }).join('');
 
-  const sts = staminaStatus(player.currentStamina);
-  const pct = Math.round((player.currentStamina / player.maxStamina) * 100);
+  const sts = staminaStatus(player.currentStamina, player.params.stamina);
+  const pct = Math.round((player.currentStamina / player.params.stamina) * 100);
 
   modal.innerHTML = `
     <div class="modal-content" style="padding:0;overflow:hidden">
@@ -760,11 +765,11 @@ function showPlayerDetail(player) {
       <div class="pdc-body">
         <div class="pdc-params-grid">${paramRows}</div>
         <div class="stamina-compact-item" style="margin-bottom:16px">
-          <span class="sci-name">スタミナ</span>
+          <span class="sci-name">体力</span>
           <div class="sci-bar">
             <div class="sci-bar-fill" style="width:${pct}%;background:${sts.color}"></div>
           </div>
-          <span class="sci-val">${player.currentStamina}</span>
+          <span class="sci-val">${Math.round(player.currentStamina)}/${Math.round(player.params.stamina)}</span>
           <span class="sci-status" style="color:${sts.color}">${sts.text}</span>
         </div>
         <button id="modal-close" class="btn-primary btn-full">閉じる</button>
@@ -857,8 +862,8 @@ function renderPractice(state) {
   const targetStats = selectedMenu ? selectedMenu.params : ['spike'];
 
   const playerCardsHtml = sortedPlayers.map(p => {
-    const sts  = staminaStatus(p.currentStamina);
-    const pct  = Math.round((p.currentStamina / p.maxStamina) * 100);
+    const sts  = staminaStatus(p.currentStamina, p.params.stamina);
+    const pct  = Math.round((p.currentStamina / p.params.stamina) * 100);
     const ovr  = playerOverall(p);
 
     if (p.isInjured) {
@@ -880,7 +885,7 @@ function renderPractice(state) {
           <div style="margin-top: 6px;">
             <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: #aaa; font-weight: 700; margin-bottom: 3px;">
               <span>体力</span>
-              <span>${Math.round(p.currentStamina)}</span>
+              <span>${Math.round(p.currentStamina)}/${Math.round(p.params.stamina)}</span>
             </div>
             <div class="pc-stamina-bar-wrap" style="height: 5px; background: #e5e5ea; border-radius: 3px; overflow: hidden;">
               <div style="height: 100%; border-radius: 3px; width:${pct}%; background: #bdbdbd;"></div>
@@ -896,7 +901,7 @@ function renderPractice(state) {
 
     // 通常カード
     const statsHtml = targetStats.map(stat => {
-      const val = stat === 'stamina' ? Math.round(p.currentStamina) : (p.params[stat] || 0);
+      const val = p.params[stat] || 0;
       const sName = PARAM_NAMES[stat] || stat;
       return `
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.8rem; animation: paramFade 0.3s ease-out;">
@@ -930,7 +935,7 @@ function renderPractice(state) {
         <div style="margin-top: 6px;">
           <div style="display: flex; justify-content: space-between; font-size: 0.6rem; color: #8e8e93; font-weight: 700; margin-bottom: 3px;">
             <span>体力</span>
-            <span style="color:${sts.color}">${Math.round(p.currentStamina)}</span>
+            <span style="color:${sts.color}">${Math.round(p.currentStamina)}/${Math.round(p.params.stamina)}</span>
           </div>
           <div class="pc-stamina-bar-wrap" style="height: 5px; background: #eee; border-radius: 3px; overflow: hidden;">
             <div class="pc-stamina-bar" style="height: 100%; border-radius: 3px; width:${pct}%; background:${sts.color}; transition: width 0.3s ease;"></div>

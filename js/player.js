@@ -61,7 +61,6 @@ function generatePlayer(id, grade, position, statBase, isAllRounder = false) {
     params,
     exp: {},
     currentStamina: params.stamina,
-    maxStamina: 100,
     potential: Math.floor(Math.random() * 3) + 1, // 1-3 (潜在能力)
     isInjured: false,
     injuryRemainingWeeks: 0,
@@ -192,7 +191,7 @@ function playerOverall(player) {
 // パラメータ増加（練習）
 function applyParamGrowth(player, params, baseGrowth, efficiency) {
   if (!player.exp) player.exp = {};
-  const staminaFactor = player.currentStamina / player.maxStamina;
+  const staminaFactor = player.currentStamina / player.params.stamina;
   const posGrowth = POSITION_GROWTH_PARAMS[player.position] || [];
   const practiceParams = params.filter(k => k !== 'stamina');
   const multiParamFactor = 1 / Math.sqrt(practiceParams.length);
@@ -222,14 +221,12 @@ function applyParamGrowth(player, params, baseGrowth, efficiency) {
 // スタミナ消費（練習）
 function consumeStamina(player, amount) {
   player.currentStamina = Math.max(0, player.currentStamina - amount);
-  player.params.stamina = player.currentStamina;
 }
 
 // スタミナ自然回復（週次）
 function recoverStaminaWeekly(player) {
   const recovery = 8;
-  player.currentStamina = Math.min(player.maxStamina, player.currentStamina + recovery);
-  player.params.stamina = player.currentStamina;
+  player.currentStamina = Math.min(player.params.stamina, player.currentStamina + recovery);
 }
 
 // 試合後スタミナ消費
@@ -239,10 +236,11 @@ function consumeMatchStamina(player, sets) {
 }
 
 // スタミナ状態テキスト
-function staminaStatus(stamina) {
-  if (stamina >= 70) return { text: '良好', color: '#4CAF50' };
-  if (stamina >= 40) return { text: '普通', color: '#FF9800' };
-  if (stamina >= 10) return { text: '疲労', color: '#F44336' };
+function staminaStatus(current, total) {
+  const ratio = total > 0 ? current / total : 0;
+  if (ratio >= 0.70) return { text: '良好', color: '#4CAF50' };
+  if (ratio >= 0.40) return { text: '普通', color: '#FF9800' };
+  if (ratio >= 0.10) return { text: '疲労', color: '#F44336' };
   return { text: '限界', color: '#9C27B0' };
 }
 
@@ -250,7 +248,8 @@ function staminaStatus(stamina) {
 function combatScore(player) {
   const pos = player.position;
   const p = player.params;
-  const staminaMod = player.currentStamina < 10 ? 0.6 : (player.currentStamina < 30 ? 0.8 : 1.0);
+  const staminaRatio = player.params.stamina > 0 ? player.currentStamina / player.params.stamina : 0;
+  const staminaMod = staminaRatio < 0.10 ? 0.6 : (staminaRatio < 0.30 ? 0.8 : 1.0);
 
   let score;
   switch (pos) {
