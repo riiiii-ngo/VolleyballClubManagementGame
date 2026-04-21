@@ -92,6 +92,11 @@ window.onContinue = async function() {
 // メインゲーム画面へ
 // ==============================
 function startMainGame() {
+  // 週次メニューが未設定の場合（新規 or 旧セーブデータ）は生成して保存
+  if (!G.weeklyMenuIds || G.weeklyMenuIds.length === 0) {
+    generateWeeklyMenus(G);
+    saveGame(G);
+  }
   setStateRef(G);
   document.getElementById('app').innerHTML = `
     <header class="app-header">
@@ -263,9 +268,11 @@ window.onAdvanceWeek = function() {
     return;
   }
 
+  G.restingPlayerIds = [];
+  generateWeeklyMenus(G);
+  saveGame(G);
   setStateRef(G);
   showPracticeResult(G.weeklyResults || [], G.weeklyLog || []);
-  G.restingPlayerIds = [];
 };
 
 // ==============================
@@ -298,7 +305,8 @@ window.onModalClose = function() {
     return;
   }
 
-  G.restingPlayerIds = []; // 翌週のためにリセット
+  G.restingPlayerIds = [];
+  generateWeeklyMenus(G);
   saveGame(G);
   setStateRef(G);
   switchTabPublic('home');
@@ -332,6 +340,7 @@ function doYearEnd() {
     G.practiceGroups[0].push(p.id);
   });
   autoSetStarters(G);
+  generateWeeklyMenus(G);
 
   saveGame(G);
   setStateRef(G);

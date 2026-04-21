@@ -37,6 +37,8 @@ function createDefaultState() {
     weeklyLog: [],       // 今週の出来事
     weeklyResults: [],   // 今週の成長結果詳細
     practiceSelections: {}, // グループ毎の選択練習メニューID {groupIndex: menuId}
+    weeklyMenuIds: [],      // 今週表示するメニューIDの配列
+    bonusMenuId:   null,    // 今週のボーナスメニューID（1.5倍経験値）
     restingPlayerIds: [],   // 個別に休憩させる選手のID
     pendingScouts: [],      // 来年度入部予定のスカウト選手
     bestRecords: {          // 過去最高戦績 { tournamentId: { round, year, champion } }
