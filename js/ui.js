@@ -832,7 +832,12 @@ function renderPractice(state) {
   setActionFooter('');
   const el = document.getElementById('tab-action');
   const groupCount = Math.min(state.practiceGroups.length, maxPracticeGroups(state.reputation));
-  const menus = getAvailablePracticeMenus(state.reputation);
+  const weeklyMenus = (state.weeklyMenuIds || [])
+    .map(id => getPracticeMenu(id))
+    .filter(Boolean);
+  const menus = weeklyMenus.length > 0
+    ? weeklyMenus
+    : getAvailablePracticeMenus(state.reputation);
   const eff   = getPracticeEfficiency(state);
 
   // グループインデックスが範囲外なら補正
@@ -955,9 +960,10 @@ function renderPractice(state) {
   // ────────────────────────────────────────
   const menuCardsHtml = menus.map(menu => {
     const isSelected = state.practiceSelections[practiceSelectedGroup] === menu.id;
+    const isBonus    = menu.id === state.bonusMenuId;
     const icon = PRACTICE_MENU_ICONS[menu.params[0]] || '📋';
-    const paramsText = menu.params.map(k => PARAM_NAMES[k]).join('・');
-    return `<div class="training-menu-card${isSelected ? ' selected' : ''}" data-menu-id="${menu.id}" role="button">
+    return `<div class="training-menu-card${isSelected ? ' selected' : ''}${isBonus ? ' bonus' : ''}" data-menu-id="${menu.id}" role="button">
+      ${isBonus ? '<div class="bonus-badge">★ おすすめ</div>' : ''}
       <div class="tmc-header">
         <span class="tmc-icon">${icon}</span>
         <span class="tmc-name">${menu.name}</span>

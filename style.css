@@ -1838,6 +1838,7 @@ button {
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s, background 0.12s;
   user-select: none;
+  position: relative;
 }
 
 .training-menu-card:active {
@@ -1849,6 +1850,35 @@ button {
   background: linear-gradient(160deg, #FFFBE6 0%, #FFE44D 100%);
   border-color: #FFB800;
   box-shadow: 0 3px 12px rgba(255, 184, 0, 0.4);
+}
+
+/* ボーナスメニュー → オレンジ強調 */
+.training-menu-card.bonus {
+  background: linear-gradient(160deg, #FFF5E6 0%, #FFD580 100%);
+  border-color: #FF9500;
+  box-shadow: 0 3px 12px rgba(255, 149, 0, 0.4);
+}
+
+.training-menu-card.bonus.selected {
+  background: linear-gradient(160deg, #FFF0D6 0%, #FFB800 100%);
+  border-color: #FF6B2B;
+  box-shadow: 0 4px 14px rgba(255, 107, 43, 0.5);
+}
+
+.bonus-badge {
+  position: absolute;
+  top: -9px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #FF9500 0%, #FF6B2B 100%);
+  color: #fff;
+  font-size: 0.52rem;
+  font-weight: 900;
+  padding: 2px 7px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(255, 107, 43, 0.5);
+  pointer-events: none;
 }
 
 .tmc-header {

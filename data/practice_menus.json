@@ -1,18 +1,24 @@
 {
   "menus": [
-    { "id": "pass",          "name": "パス練習",           "params": ["receive","toss","technique"],                          "tier": 1, "minRep": 0, "staminaCost": 5  },
-    { "id": "wall",          "name": "壁打ち",             "params": ["spike","serve"],                                       "tier": 1, "minRep": 0, "staminaCost": 5  },
-    { "id": "gym",           "name": "筋トレ",             "params": ["power","stamina"],                                     "tier": 1, "minRep": 0, "staminaCost": 5  },
-    { "id": "block1",        "name": "ブロック練習",       "params": ["block","speed"],                                       "tier": 1, "minRep": 0, "staminaCost": 5  },
-    { "id": "minigame",      "name": "ミニゲーム",         "params": ["spike","receive","block","serve","toss","power","speed","technique"], "tier": 1, "minRep": 0, "staminaCost": 6, "mini": true },
-    { "id": "spike2",        "name": "スパイク練習",       "params": ["spike","toss","power"],                                "tier": 2, "minRep": 2, "staminaCost": 8  },
-    { "id": "readblock",     "name": "リードブロック",     "params": ["block","speed","technique"],                           "tier": 2, "minRep": 2, "staminaCost": 8  },
-    { "id": "servreceive",   "name": "サーブレシーブ",     "params": ["receive","stamina","serve"],                           "tier": 2, "minRep": 2, "staminaCost": 8  },
-    { "id": "combi",         "name": "コンビ練習",         "params": ["spike","toss","power","technique"],                    "tier": 3, "minRep": 4, "staminaCost": 12 },
-    { "id": "guessblock",    "name": "ゲスブロック練習",   "params": ["block","technique","speed","power"],                   "tier": 3, "minRep": 4, "staminaCost": 12 },
-    { "id": "sheetreceive",  "name": "シートレシーブ",     "params": ["receive","speed","stamina","toss"],                    "tier": 3, "minRep": 4, "staminaCost": 12 },
-    { "id": "jumpserve",     "name": "ジャンプサーブ練習", "params": ["serve","toss","stamina","receive"],                    "tier": 3, "minRep": 4, "staminaCost": 12 }
+    { "id": "spike1",   "name": "スパイク基礎",     "params": ["spike","power","speed"],                   "tier": 1, "minRep": 0, "staminaCost": 5  },
+    { "id": "spike2",   "name": "スパイク強化",     "params": ["spike","power","technique"],               "tier": 2, "minRep": 2, "staminaCost": 8  },
+    { "id": "spike3",   "name": "スパイク実戦",     "params": ["spike","power","technique","speed"],       "tier": 3, "minRep": 4, "staminaCost": 12 },
+    { "id": "block1",   "name": "ブロック基礎",     "params": ["block","speed"],                           "tier": 1, "minRep": 0, "staminaCost": 5  },
+    { "id": "block2",   "name": "ブロック強化",     "params": ["block","speed","technique"],               "tier": 2, "minRep": 2, "staminaCost": 8  },
+    { "id": "block3",   "name": "ブロック連携",     "params": ["block","speed","technique","power"],       "tier": 3, "minRep": 4, "staminaCost": 12 },
+    { "id": "receive1", "name": "レシーブ基礎",     "params": ["receive","technique"],                     "tier": 1, "minRep": 0, "staminaCost": 5  },
+    { "id": "receive2", "name": "レシーブ強化",     "params": ["receive","technique","speed"],             "tier": 2, "minRep": 2, "staminaCost": 8  },
+    { "id": "receive3", "name": "レシーブ実戦",     "params": ["receive","technique","speed","power"],     "tier": 3, "minRep": 4, "staminaCost": 12 },
+    { "id": "toss1",    "name": "トス基礎",         "params": ["toss","technique"],                        "tier": 1, "minRep": 0, "staminaCost": 5  },
+    { "id": "toss2",    "name": "トス強化",         "params": ["toss","technique","speed"],                "tier": 2, "minRep": 2, "staminaCost": 8  },
+    { "id": "toss3",    "name": "トス戦術",         "params": ["toss","technique","speed","power"],        "tier": 3, "minRep": 4, "staminaCost": 12 },
+    { "id": "serve1",   "name": "サーブ基礎",       "params": ["serve","power"],                           "tier": 1, "minRep": 0, "staminaCost": 5  },
+    { "id": "serve2",   "name": "サーブ強化",       "params": ["serve","power","technique"],               "tier": 2, "minRep": 2, "staminaCost": 8  },
+    { "id": "serve3",   "name": "サーブ実戦",       "params": ["serve","power","technique","speed"],       "tier": 3, "minRep": 4, "staminaCost": 12 },
+    { "id": "gym1",     "name": "筋トレ",           "params": ["stamina"],                                 "tier": 1, "minRep": 0, "staminaCost": 5  },
+    { "id": "gym3",     "name": "フィジカル強化",   "params": ["stamina","power"],                         "tier": 3, "minRep": 4, "staminaCost": 12 }
   ],
-  "growth": { "1": 2, "2": 4, "3": 6 },
-  "minigameGrowth": 1
+  "growth":          { "1": 2, "2": 4, "3": 6 },
+  "weeklyCount":     6,
+  "bonusMultiplier": 1.5
 }

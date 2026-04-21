@@ -83,12 +83,13 @@ const OPPONENT_STRENGTH = {
 // ==============================
 // JSONから読み込むマスターデータ（起動時にloadMasterData()で設定される）
 // ==============================
-let ITEMS           = [];
-let FACILITIES      = [];
-let PRACTICE_MENUS  = [];
-let PRACTICE_GROWTH = {};
-let MINIGAME_GROWTH = 1;
-let MATCH_SCHEDULE  = {};
+let ITEMS              = [];
+let FACILITIES         = [];
+let PRACTICE_MENUS     = [];
+let PRACTICE_GROWTH    = {};
+let WEEKLY_MENU_COUNT  = 6;
+let BONUS_MULTIPLIER   = 1.5;
+let MATCH_SCHEDULE     = {};
 let TOURNAMENT_NAMES = {};
 let REP_POINTS_WIN  = {};
 let MATCH_POINTS_WIN = {};
@@ -115,9 +116,10 @@ async function loadMasterData() {
   FACILITIES = itemsData.facilities;
 
   // 練習メニュー
-  PRACTICE_MENUS  = menusData.menus;
-  PRACTICE_GROWTH = menusData.growth;    // { "1": 2, "2": 4, "3": 6 }
-  MINIGAME_GROWTH = menusData.minigameGrowth;
+  PRACTICE_MENUS    = menusData.menus;
+  PRACTICE_GROWTH   = menusData.growth;          // { "1": 2, "2": 4, "3": 6 }
+  WEEKLY_MENU_COUNT = menusData.weeklyCount ?? 6;
+  BONUS_MULTIPLIER  = menusData.bonusMultiplier ?? 1.5;
 
   // スケジュール・トーナメント
   MATCH_SCHEDULE   = scheduleData.matchSchedule;   // キーは文字列 "8" など

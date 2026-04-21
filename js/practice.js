@@ -12,6 +12,28 @@ function getPracticeMenu(menuId) {
   return PRACTICE_MENUS.find(m => m.id === menuId) || null;
 }
 
+// 週次メニューを抽選してstateに保存する
+// ・onAdvanceWeek / doYearEnd / 初回ロード時のみ呼ぶ（renderでは呼ばない）
+function generateWeeklyMenus(state) {
+  const available = getAvailablePracticeMenus(state.reputation);
+  const count = Math.min(WEEKLY_MENU_COUNT, available.length);
+
+  const shuffled = available.slice().sort(() => Math.random() - 0.5);
+  const selected = shuffled.slice(0, count);
+  state.weeklyMenuIds = selected.map(m => m.id);
+
+  // ボーナスメニューをランダムに1つ選ぶ
+  const bonusIdx = Math.floor(Math.random() * selected.length);
+  state.bonusMenuId = selected[bonusIdx].id;
+
+  // 今週の選択肢から外れたグループ選択をクリア
+  Object.keys(state.practiceSelections).forEach(gi => {
+    if (!state.weeklyMenuIds.includes(state.practiceSelections[gi])) {
+      delete state.practiceSelections[gi];
+    }
+  });
+}
+
 // 1週間の練習を実行
 // state を直接変更し、ログと詳細な成長データを返す
 function executePractice(state) {
@@ -37,9 +59,8 @@ function executePractice(state) {
       continue;
     }
 
-    const baseGrowth = menu.mini
-      ? MINIGAME_GROWTH
-      : PRACTICE_GROWTH[menu.tier] || 2;
+    const isBonus = menuId === state.bonusMenuId;
+    const baseGrowth = (PRACTICE_GROWTH[menu.tier] || 2) * (isBonus ? BONUS_MULTIPLIER : 1);
 
     let groupLog = `グループ${gi + 1}【${menu.name}】`;
     const growResults = [];
