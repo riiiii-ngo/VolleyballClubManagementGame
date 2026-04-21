@@ -32,11 +32,7 @@ function generatePlayer(id, grade, position, statBase, isAllRounder = false) {
   const params = {};
 
   PARAM_KEYS.forEach(k => {
-    if (k === 'stamina') {
-      params[k] = clamp(85 + Math.floor(Math.random() * 15)); // 85-99
-    } else {
-      params[k] = clamp(statBase + noise());
-    }
+    params[k] = clamp(statBase + noise());
   });
 
   // ポジション適性ボーナス

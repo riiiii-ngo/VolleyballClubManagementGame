@@ -138,11 +138,6 @@ function migrateState(state) {
         p.params.stamina = p.maxStamina;
         delete p.maxStamina;
         p.currentStamina = Math.min(p.currentStamina, p.params.stamina);
-      } else if (p.params && p.params.stamina !== undefined && p.currentStamina !== undefined) {
-        // params.staminaがcurrentStaminaと同値（旧同期形式）の場合は100に補正
-        if (Math.abs(p.params.stamina - p.currentStamina) < 1) {
-          p.params.stamina = 100;
-        }
       }
     });
   }
