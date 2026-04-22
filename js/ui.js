@@ -1053,7 +1053,7 @@ function renderPractice(state) {
   el.querySelectorAll('.group-selector-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       practiceSelectedGroup = parseInt(btn.dataset.group);
-      renderPractice(state);
+      preservePracticeScroll(() => renderPractice(state));
     });
   });
 
@@ -2074,8 +2074,9 @@ window.onAdvanceToAction = function() {
  * 従来の練習/試合前画面
  */
 function renderPracticeArea(state) {
+  practiceSelectedGroup = 0;  // 他タブから遷移した際は常にグループ1を表示
   const el = document.getElementById('tab-action');
-  
+
   const matchInfo = MATCH_SCHEDULE[state.week];
   const tState = matchInfo ? state.tournaments[matchInfo.tournament] : null;
   const isMatchWeek = matchInfo && tState && !tState.eliminated && !tState.champion;
