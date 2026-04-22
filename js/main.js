@@ -193,6 +193,25 @@ function preserveScroll(selector, fn) {
   }
 }
 
+// 練習画面の縦スクロール（選手一覧）と横スクロール（メニュー・グループ）を両方保存・復元
+function preservePracticeScroll(fn) {
+  const playersEl = document.querySelector('.practice-players-area');
+  const menuEl    = document.querySelector('.training-menu-scroll');
+  const groupEl   = document.querySelector('.group-selector-scroll');
+  const playersTop = playersEl ? playersEl.scrollTop  : 0;
+  const menuLeft   = menuEl   ? menuEl.scrollLeft    : 0;
+  const groupLeft  = groupEl  ? groupEl.scrollLeft   : 0;
+  fn();
+  requestAnimationFrame(() => {
+    const newPlayers = document.querySelector('.practice-players-area');
+    const newMenu    = document.querySelector('.training-menu-scroll');
+    const newGroup   = document.querySelector('.group-selector-scroll');
+    if (newPlayers) newPlayers.scrollTop  = playersTop;
+    if (newMenu)    newMenu.scrollLeft    = menuLeft;
+    if (newGroup)   newGroup.scrollLeft   = groupLeft;
+  });
+}
+
 function renderAll() {
   updateStatusBar(G);
   renderTab('home');
@@ -389,7 +408,7 @@ window.onAutoGroup = function() {
 window.onPracticeSelect = function(groupIndex, menuId) {
   G.practiceSelections[groupIndex] = menuId;
   saveGame(G);
-  preserveScroll('.practice-players-area', () => renderPractice(G));
+  preservePracticeScroll(() => renderPractice(G));
 };
 
 // ==============================
@@ -403,7 +422,7 @@ window.onToggleRest = function(playerId) {
   } else {
     G.restingPlayerIds.push(playerId);
   }
-  preserveScroll('.practice-players-area', () => renderPractice(G));
+  preservePracticeScroll(() => renderPractice(G));
 };
 
 // ==============================
