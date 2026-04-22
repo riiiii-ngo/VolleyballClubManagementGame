@@ -853,10 +853,27 @@ button {
   font-weight: 700;
   position: sticky;
   top: 0;
+  z-index: 2;
+}
+
+.roster-table th:first-child {
+  z-index: 3;
 }
 
 .roster-table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: #fff;
   text-align: left;
+}
+
+.pos-label {
+  display: inline-block;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: #007AFF;
+  min-width: 20px;
 }
 
 .roster-table tbody tr:active {

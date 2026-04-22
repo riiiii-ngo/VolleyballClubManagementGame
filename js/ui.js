@@ -626,18 +626,25 @@ function renderPlayerList(state) {
     <div class="roster-table-wrap">
       <table class="roster-table">
         <thead><tr>
-          <th>名前</th><th>Grp</th><th>学年</th><th>Pos</th><th>OVR</th>
+          <th>名前</th><th>Grp</th><th>学年</th><th>OVR</th>
           <th>SP</th><th>RV</th><th>BL</th><th>SV</th><th>TS</th>
           <th>PW</th><th>SP2</th><th>TC</th><th>ST</th>
         </tr></thead><tbody>`;
 
+  const starterIds = Object.values(state.starters);
   state.players
-    .sort((a, b) => b.grade - a.grade || playerOverall(b) - playerOverall(a))
+    .sort((a, b) => {
+      const aIsStarter = starterIds.includes(a.id);
+      const bIsStarter = starterIds.includes(b.id);
+      if (aIsStarter && !bIsStarter) return -1;
+      if (!aIsStarter && bIsStarter) return 1;
+      return b.grade - a.grade || playerOverall(b) - playerOverall(a);
+    })
     .forEach(p => {
       const sts = staminaStatus(p.currentStamina, p.params.stamina);
-      const isStarter = Object.values(state.starters).includes(p.id);
+      const isStarter = starterIds.includes(p.id);
       const pGroup = playerGroups[p.id] !== undefined ? playerGroups[p.id] : -1;
-      
+
       const grpLabel = pGroup === -1 ? '-' : ['A','B','C','D'][pGroup];
       const grpColor = pGroup === -1 ? '#888' : ['#007AFF','#34C759','#FF9500','#AF52DE'][pGroup];
       const selectHtml = `<span class="group-cycle-btn" data-pid="${p.id}" data-group="${pGroup}" data-groupcount="${groupCount}" style="display:inline-block;min-width:24px;padding:2px 7px;border-radius:5px;background:${grpColor};color:#fff;font-weight:700;font-size:0.85rem;cursor:pointer;text-align:center;">${grpLabel}</span>`;
@@ -646,11 +653,11 @@ function renderPlayerList(state) {
         ? ` <span style="background:#FF3B30;color:#fff;font-size:0.6rem;font-weight:800;padding:1px 5px;border-radius:4px;">🩼ケガ中(あと${p.injuryRemainingWeeks}週)</span>`
         : '';
 
-      rosterHtml += `<tr class="${isStarter ? 'starter-row' : ''}" style="${p.isInjured ? 'opacity:0.45;background:#f9f9f9;' : ''}">
-        <td>${p.name}${isStarter ? ' <span class="badge-st">先</span>' : ''}${injuryBadge}</td>
+      const posDisplay = p.isAllRounder ? '<span class="badge-ar">全</span>' : `<span class="pos-label">${p.position}</span>`;
+      rosterHtml += `<tr class="${isStarter ? 'starter-row' : ''}" style="${p.isInjured ? 'opacity:0.45;' : ''}">
+        <td>${isStarter ? '<span class="badge-st">先</span> ' : ''}${posDisplay} ${p.name}${injuryBadge}</td>
         <td>${selectHtml}</td>
         <td>${p.grade}年</td>
-        <td>${p.isAllRounder ? '<span class="badge-ar">全</span>' : p.position}</td>
         <td><strong>${playerOverall(p)}</strong></td>
         <td>${renderStatList(p.params.spike)}</td>
         <td>${renderStatList(p.params.receive)}</td>
@@ -1417,7 +1424,7 @@ function showOpponentDataModal(opponent, state, matchInfo) {
   const statsToShow = PARAM_KEYS.filter(k => k !== 'stamina');
   
   const rows = opponent.players.map(p => `
-    <tr class="opponent-player-row">
+    <tr>
       <td class="opp-pos">${p.position}</td>
       <td class="opp-name">${p.name}</td>
       <td class="opp-ovr"><strong>${playerOverall(p)}</strong></td>
