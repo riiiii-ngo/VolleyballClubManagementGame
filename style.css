@@ -826,6 +826,8 @@ button {
 
 .roster-table-wrap {
   overflow-x: auto;
+  overflow-y: auto;
+  max-height: calc(100vh - 160px);
   margin-top: 8px;
   border-radius: var(--radius-sm);
 }
@@ -857,6 +859,8 @@ button {
 }
 
 .roster-table th:first-child {
+  position: sticky;
+  left: 0;
   z-index: 3;
 }
 
@@ -881,6 +885,10 @@ button {
 }
 
 .starter-row {
+  background: rgba(0, 122, 255, 0.06);
+}
+
+.starter-row td:first-child {
   background: rgba(0, 122, 255, 0.06);
 }
 
@@ -1489,6 +1497,62 @@ button {
   color: var(--text2);
   margin-top: 14px;
   line-height: 1.6;
+}
+
+/* Googleログインボタン */
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #fff;
+  border: 1.5px solid #dadce0;
+  color: #3c4043;
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+
+.btn-google:hover {
+  background: #f7f8f8;
+  border-color: #c6c6c6;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.btn-google:active {
+  background: #eee;
+  transform: scale(0.98);
+}
+
+.btn-google .google-icon {
+  flex-shrink: 0;
+}
+
+/* ログイン画面の区切り線 */
+.login-divider {
+  display: flex;
+  align-items: center;
+  margin: 20px 0;
+  gap: 12px;
+}
+
+.login-divider::before,
+.login-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.login-divider-text {
+  font-size: 0.78rem;
+  color: var(--text2);
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 /* ログアウトボタン */

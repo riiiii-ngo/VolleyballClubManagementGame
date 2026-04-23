@@ -28,6 +28,17 @@ async function signIn(email, password) {
   return data;
 }
 
+/** GoogleアカウントでOAuthログイン */
+async function signInWithGoogle() {
+  const { error } = await _supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin + window.location.pathname,
+    },
+  });
+  if (error) throw error;
+}
+
 /** ログアウト */
 async function signOut() {
   const { error } = await _supabase.auth.signOut();
@@ -238,5 +249,12 @@ _supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT') {
     // ログアウト時はローカルストレージもクリア
     localStorage.removeItem('volleyball_game_save');
+  }
+  // OAuthリダイレクト後のログイン完了を検知
+  if (event === 'SIGNED_IN' && session && window._oauthLoginPending) {
+    window._oauthLoginPending = false;
+    if (typeof window.onLoginSuccess === 'function') {
+      window.onLoginSuccess(session);
+    }
   }
 });
