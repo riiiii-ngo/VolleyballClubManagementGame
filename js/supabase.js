@@ -58,6 +58,40 @@ async function getCurrentUserId() {
   return session ? session.user.id : null;
 }
 
+/** ゲストとしてプレイ（Supabaseログインなし・localStorage保存のみ） */
+function signInAsGuest() {
+  let guestId = localStorage.getItem('volleyball_guest_id');
+  if (!guestId) {
+    guestId = crypto.randomUUID();
+    localStorage.setItem('volleyball_guest_id', guestId);
+  }
+  window._isGuest = true;
+  return guestId;
+}
+
+/** 現在のアカウントにGoogleを連携（OAuthリダイレクト） */
+async function linkWithGoogle() {
+  const { error } = await _supabase.auth.linkIdentity({
+    provider: 'google',
+    options: { redirectTo: window.location.origin + window.location.pathname },
+  });
+  if (error) throw error;
+}
+
+/** Googleアカウントにパスワードを設定してメールログインも可能にする */
+async function setEmailPassword(password) {
+  const { data, error } = await _supabase.auth.updateUser({ password });
+  if (error) throw error;
+  return data;
+}
+
+/** 現在のユーザーに紐づく認証プロバイダー一覧を取得 */
+async function getUserIdentities() {
+  const { data, error } = await _supabase.auth.getUserIdentities();
+  if (error) return [];
+  return data?.identities || [];
+}
+
 // ==============================
 // セーブデータ操作
 // ==============================
@@ -247,14 +281,27 @@ async function leaveOnlinePool(poolEntryId) {
 // ==============================
 _supabase.auth.onAuthStateChange((event, session) => {
   if (event === 'SIGNED_OUT') {
-    // ログアウト時はローカルストレージもクリア
     localStorage.removeItem('volleyball_game_save');
   }
-  // OAuthリダイレクト後のログイン完了を検知
-  if (event === 'SIGNED_IN' && session && window._oauthLoginPending) {
-    window._oauthLoginPending = false;
-    if (typeof window.onLoginSuccess === 'function') {
-      window.onLoginSuccess(session);
+  if (event === 'SIGNED_IN' && session) {
+    if (window._oauthGuestUpgradePending) {
+      // ゲスト→Googleアカウント昇格
+      window._oauthGuestUpgradePending = false;
+      if (typeof window.onGuestUpgradeComplete === 'function') {
+        window.onGuestUpgradeComplete(session);
+      }
+    } else if (window._oauthLinkPending) {
+      // 既存アカウントへのGoogle連携
+      window._oauthLinkPending = false;
+      if (typeof window.onAccountLinkComplete === 'function') {
+        window.onAccountLinkComplete();
+      }
+    } else if (window._oauthLoginPending) {
+      // 初回GoogleOAuthログイン
+      window._oauthLoginPending = false;
+      if (typeof window.onLoginSuccess === 'function') {
+        window.onLoginSuccess(session);
+      }
     }
   }
 });

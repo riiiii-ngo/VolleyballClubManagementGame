@@ -1555,8 +1555,8 @@ button {
   white-space: nowrap;
 }
 
-/* ログアウトボタン */
-.btn-logout {
+/* アカウント管理ボタン（旧ログアウトボタン置き換え） */
+.btn-account {
   background: rgba(255, 255, 255, 0.15);
   border: none;
   color: rgba(255, 255, 255, 0.8);
@@ -1566,8 +1566,137 @@ button {
   cursor: pointer;
 }
 
-.btn-logout:hover {
+.btn-account:hover {
   background: rgba(255, 255, 255, 0.25);
+}
+
+/* ゲストログインボタン */
+.btn-guest {
+  background: transparent;
+  border: 1.5px solid var(--border);
+  color: var(--text2);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  width: 100%;
+  text-align: center;
+}
+
+.btn-guest:hover {
+  background: rgba(0, 0, 0, 0.04);
+}
+
+/* 危険操作ボタン */
+.btn-danger {
+  background: rgba(255, 59, 48, 0.08);
+  border: 1.5px solid var(--red);
+  color: var(--red);
+  border-radius: var(--radius-sm);
+  padding: 12px 16px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+}
+
+.btn-danger:hover {
+  background: rgba(255, 59, 48, 0.15);
+}
+
+/* アカウント管理モーダル内パーツ */
+.account-guest-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 196, 0, 0.1);
+  border: 1.5px solid rgba(255, 196, 0, 0.5);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.account-guest-title {
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.account-guest-sub {
+  font-size: 0.8rem;
+  color: var(--text2);
+  margin-top: 2px;
+}
+
+.account-info-text {
+  font-size: 0.85rem;
+  color: var(--text2);
+  margin: 0 0 16px;
+  line-height: 1.5;
+}
+
+.account-info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.9rem;
+}
+
+.account-info-label {
+  color: var(--text2);
+  font-size: 0.8rem;
+}
+
+.account-info-value {
+  font-weight: 600;
+  word-break: break-all;
+  text-align: right;
+  max-width: 60%;
+}
+
+.account-section-title {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text2);
+  margin: 16px 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.account-linked-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(52, 199, 89, 0.1);
+  border: 1.5px solid var(--green);
+  color: var(--green);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-top: 8px;
+}
+
+.account-divider {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 20px 0 16px;
+}
+
+.modal-close-btn {
+  background: none;
+  border: none;
+  font-size: 1.1rem;
+  color: var(--text2);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  line-height: 1;
+}
+
+.modal-close-btn:hover {
+  background: rgba(0, 0, 0, 0.06);
 }
 
 /* ==============================

@@ -129,6 +129,12 @@ function renderLoginScreen() {
           <button id="btn-signup" class="btn-secondary btn-large btn-full">新規登録</button>
         </div>
 
+        <div class="login-divider">
+          <span class="login-divider-text">または</span>
+        </div>
+
+        <button id="btn-guest-login" class="btn-guest btn-large btn-full">ゲストとしてプレイ（データはこの端末のみ）</button>
+
       </div>
     </div>
   `;
@@ -193,6 +199,12 @@ function renderLoginScreen() {
     el.addEventListener('keydown', e => {
       if (e.key === 'Enter') document.getElementById('btn-login').click();
     });
+  });
+
+  // ゲストログインボタン
+  document.getElementById('btn-guest-login').addEventListener('click', () => {
+    signInAsGuest();
+    window.onLoginSuccess(null);
   });
 }
 

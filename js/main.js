@@ -31,10 +31,16 @@ async function initGame() {
   hideLoading();
 
   if (!session) {
-    // 未ログイン → ログイン画面へ
-    renderLoginScreen();
+    // ゲストセッションが残っていればゲストモードで続行
+    const guestId = localStorage.getItem('volleyball_guest_id');
+    if (guestId) {
+      window._isGuest = true;
+      await afterLogin(null);
+    } else {
+      renderLoginScreen();
+    }
   } else {
-    // ログイン済み → セーブデータ読み込みへ
+    window._isGuest = false;
     await afterLogin(session.user?.id ?? null);
   }
 }
@@ -43,8 +49,36 @@ async function initGame() {
 // ログイン成功後の処理
 // ==============================
 window.onLoginSuccess = async function(session) {
+  window._isGuest = false;
   showLoading('セーブデータ読み込み中...');
   await afterLogin(session?.user?.id ?? null);
+};
+
+// ゲスト→Googleアカウント昇格完了（OAuthリダイレクト後）
+window.onGuestUpgradeComplete = async function(session) {
+  showLoading('データを移行中...');
+  const newUserId = session?.user?.id;
+  if (newUserId && G) {
+    try {
+      await saveToDB(G);
+    } catch(e) {
+      console.error('ゲストデータ移行失敗:', e);
+    }
+  }
+  localStorage.removeItem('volleyball_guest_id');
+  window._isGuest = false;
+  hideLoading();
+  const modal = document.getElementById('modal');
+  if (modal) modal.style.display = 'none';
+  showAlert('アカウントを作成し、データをクラウドに移行しました！');
+};
+
+// 既存アカウントへのGoogle連携完了（OAuthリダイレクト後）
+window.onAccountLinkComplete = async function() {
+  hideLoading();
+  const modal = document.getElementById('modal');
+  if (modal) modal.style.display = 'none';
+  await showAccountModal();
 };
 
 async function afterLogin(userId = null) {
@@ -103,7 +137,7 @@ function startMainGame() {
       <div class="header-row">
         <span class="header-team">🏐 ${G.schoolName || 'バレー部'}</span>
         <span id="ui-date" class="header-date"></span>
-        <button id="btn-logout" class="btn-logout" title="ログアウト">⏏</button>
+        <button id="btn-account" class="btn-account" title="アカウント管理">👤</button>
       </div>
       <div class="header-kpi-row">
         <div class="kpi-chip">
@@ -165,8 +199,8 @@ function startMainGame() {
     btn.addEventListener('click', () => switchTab(btn.dataset.tab));
   });
 
-  // ログアウトボタン
-  document.getElementById('btn-logout').addEventListener('click', () => onLogout());
+  // アカウント管理ボタン
+  document.getElementById('btn-account').addEventListener('click', () => showAccountModal());
 
   renderAll();
 }
@@ -249,6 +283,198 @@ async function onLogout() {
   G = null;
   hideLoading();
   renderLoginScreen();
+}
+
+// ==============================
+// アカウント管理モーダル
+// ==============================
+const _GOOGLE_SVG = `<svg viewBox="0 0 24 24" width="18" height="18" style="vertical-align:middle;margin-right:6px"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>`;
+
+async function showAccountModal() {
+  const modal = document.getElementById('modal');
+  if (!modal) return;
+
+  const isGuest = !!window._isGuest;
+  let session = null;
+  let identities = [];
+
+  if (!isGuest) {
+    session = await getSession();
+    identities = await getUserIdentities();
+  }
+
+  const email = session?.user?.email || '';
+  const hasGoogle = identities.some(i => i.provider === 'google');
+  const hasEmail = identities.some(i => i.provider === 'email');
+
+  const modalHeader = `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <h2 style="margin:0">アカウント管理</h2>
+      <button id="modal-close" class="modal-close-btn">✕</button>
+    </div>`;
+
+  if (isGuest) {
+    modal.innerHTML = `
+      <div class="modal-content">
+        ${modalHeader}
+        <div class="account-guest-banner">
+          <span style="font-size:1.5rem">👤</span>
+          <div>
+            <div class="account-guest-title">ゲストモードでプレイ中</div>
+            <div class="account-guest-sub">データはこの端末のみ保存されます</div>
+          </div>
+        </div>
+        <p class="account-info-text">アカウントを作成するとデータをクラウドに保存でき、複数端末で引き継ぎができます。</p>
+        <button id="btn-upgrade-google" class="btn-google btn-full" style="margin-bottom:12px">
+          ${_GOOGLE_SVG}Googleアカウントで登録
+        </button>
+        <div class="login-divider"><span class="login-divider-text">または</span></div>
+        <div id="upgrade-error" class="login-error" style="display:none"></div>
+        <div class="form-group">
+          <label class="form-label">メールアドレス</label>
+          <input id="upgrade-email" type="email" class="form-input" placeholder="example@email.com">
+        </div>
+        <div class="form-group">
+          <label class="form-label">パスワード（6文字以上）</label>
+          <input id="upgrade-password" type="password" class="form-input" placeholder="パスワード">
+        </div>
+        <button id="btn-upgrade-email" class="btn-primary btn-full" style="margin-bottom:24px">メールアドレスで登録</button>
+        <hr class="account-divider">
+        <button id="btn-guest-exit" class="btn-danger btn-full" style="font-size:0.85rem">ゲスト終了（データを削除）</button>
+      </div>`;
+
+    modal.style.display = 'flex';
+    document.getElementById('modal-close').addEventListener('click', () => { modal.style.display = 'none'; });
+
+    document.getElementById('btn-upgrade-google').addEventListener('click', async () => {
+      showLoading('Googleアカウントで登録中...');
+      window._oauthGuestUpgradePending = true;
+      try {
+        await signInWithGoogle();
+      } catch(e) {
+        hideLoading();
+        window._oauthGuestUpgradePending = false;
+        const errEl = document.getElementById('upgrade-error');
+        errEl.textContent = getAuthErrorMessage(e);
+        errEl.style.display = 'block';
+      }
+    });
+
+    document.getElementById('btn-upgrade-email').addEventListener('click', async () => {
+      const emailVal = document.getElementById('upgrade-email').value.trim();
+      const pw = document.getElementById('upgrade-password').value;
+      const errEl = document.getElementById('upgrade-error');
+      errEl.style.display = 'none';
+      if (!emailVal || !pw) { errEl.textContent = 'メールアドレスとパスワードを入力してください。'; errEl.style.display = 'block'; return; }
+      if (pw.length < 6) { errEl.textContent = 'パスワードは6文字以上にしてください。'; errEl.style.display = 'block'; return; }
+      showLoading('アカウント作成中...');
+      try {
+        const data = await signUp(emailVal, pw);
+        if (data.session) {
+          // メール確認不要の場合：即座にデータ移行
+          await window.onGuestUpgradeComplete(data.session);
+        } else {
+          // メール確認が必要な場合
+          hideLoading();
+          modal.style.display = 'none';
+          showAlert('確認メールを送信しました。メール内のリンクをクリックしてからログインしてください。');
+        }
+      } catch(e) {
+        hideLoading();
+        errEl.textContent = getAuthErrorMessage(e);
+        errEl.style.display = 'block';
+      }
+    });
+
+    document.getElementById('btn-guest-exit').addEventListener('click', () => {
+      if (!confirm('ゲストデータをすべて削除してログイン画面に戻りますか？\nこの操作は元に戻せません。')) return;
+      localStorage.removeItem('volleyball_guest_id');
+      localStorage.removeItem('volleyball_game_save');
+      window._isGuest = false;
+      G = null;
+      modal.style.display = 'none';
+      renderLoginScreen();
+    });
+
+  } else {
+    const providerLabel = hasGoogle && hasEmail ? 'Google・メール両方' :
+                          hasGoogle ? 'Google' : 'メール';
+
+    const googleSection = hasGoogle
+      ? `<div class="account-linked-badge">✓ Google連携済み</div>`
+      : `<button id="btn-link-google" class="btn-google btn-full" style="margin-top:8px">${_GOOGLE_SVG}Googleアカウントを連携</button>`;
+
+    const emailSection = hasEmail
+      ? `<div class="account-linked-badge">✓ メール/パスワード設定済み</div>`
+      : `<div class="form-group" style="margin-top:8px">
+           <label class="form-label">パスワードを設定してメールでもログイン可能にする</label>
+           <input id="set-password" type="password" class="form-input" placeholder="新しいパスワード（6文字以上）">
+           <button id="btn-set-password" class="btn-secondary btn-full" style="margin-top:8px">パスワードを設定</button>
+         </div>`;
+
+    modal.innerHTML = `
+      <div class="modal-content">
+        ${modalHeader}
+        <div class="account-info-row">
+          <span class="account-info-label">メールアドレス</span>
+          <span class="account-info-value">${email}</span>
+        </div>
+        <div class="account-info-row">
+          <span class="account-info-label">連携方法</span>
+          <span class="account-info-value">${providerLabel}</span>
+        </div>
+        <div class="account-section-title">アカウント連携</div>
+        <div id="link-error" class="login-error" style="display:none"></div>
+        ${googleSection}
+        ${emailSection}
+        <hr class="account-divider">
+        <button id="btn-do-logout" class="btn-danger btn-full">ログアウト</button>
+      </div>`;
+
+    modal.style.display = 'flex';
+    document.getElementById('modal-close').addEventListener('click', () => { modal.style.display = 'none'; });
+
+    if (!hasGoogle) {
+      document.getElementById('btn-link-google').addEventListener('click', async () => {
+        showLoading('Googleアカウントを連携中...');
+        window._oauthLinkPending = true;
+        try {
+          await linkWithGoogle();
+        } catch(e) {
+          hideLoading();
+          window._oauthLinkPending = false;
+          const errEl = document.getElementById('link-error');
+          errEl.textContent = getAuthErrorMessage(e);
+          errEl.style.display = 'block';
+        }
+      });
+    }
+
+    if (!hasEmail) {
+      document.getElementById('btn-set-password').addEventListener('click', async () => {
+        const pw = document.getElementById('set-password').value;
+        const errEl = document.getElementById('link-error');
+        errEl.style.display = 'none';
+        if (pw.length < 6) { errEl.textContent = 'パスワードは6文字以上にしてください。'; errEl.style.display = 'block'; return; }
+        showLoading('パスワードを設定中...');
+        try {
+          await setEmailPassword(pw);
+          hideLoading();
+          modal.style.display = 'none';
+          await showAccountModal();
+        } catch(e) {
+          hideLoading();
+          errEl.textContent = getAuthErrorMessage(e);
+          errEl.style.display = 'block';
+        }
+      });
+    }
+
+    document.getElementById('btn-do-logout').addEventListener('click', () => {
+      modal.style.display = 'none';
+      onLogout();
+    });
+  }
 }
 
 // ==============================
